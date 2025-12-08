@@ -3,10 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Student Portal - Enhanced</title>
+    <title>Student Dashboard</title>
+    
+    <!-- Bootstrap CSS -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Font Awesome Icons -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    
     <style>
+        /* ===== RESET & BASE STYLES ===== */
         * {
             margin: 0;
             padding: 0;
@@ -17,19 +23,22 @@
             background: linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%);
             min-height: 100vh;
             padding: 20px 0;
-            font-family: 'Inter', 'Segoe UI', sans-serif;
+            font-family: 'Segoe UI', 'Inter', system-ui, sans-serif;
+            color: #333;
         }
         
+        /* ===== LAYOUT ===== */
         .main-container {
             max-width: 1400px;
             margin: 0 auto;
             padding: 0 20px;
         }
         
+        /* ===== CARD STYLES ===== */
         .card {
             border: none;
             border-radius: 16px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
             margin-bottom: 24px;
             background: white;
             overflow: hidden;
@@ -38,7 +47,7 @@
 
         .card:hover {
             transform: translateY(-4px);
-            box-shadow: 0 24px 70px rgba(0,0,0,0.4);
+            box-shadow: 0 24px 70px rgba(0, 0, 0, 0.4);
         }
         
         .card-header {
@@ -59,7 +68,7 @@
             padding: 32px;
         }
         
-        /* Navigation Header with Trust-Building Colors (Blue) */
+        /* ===== NAV HEADER ===== */
         .nav-header {
             background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
             border-radius: 16px;
@@ -76,20 +85,22 @@
             font-weight: 700;
             color: white;
             margin: 0;
+            font-size: 1.75rem;
         }
 
         .nav-header small {
-            color: rgba(255,255,255,0.85);
+            color: rgba(255, 255, 255, 0.9);
             font-weight: 500;
+            font-size: 1rem;
         }
         
-        /* Trust & Calm Navigation Tabs (Blue Psychology) */
+        /* ===== NAV TABS ===== */
         .nav-tabs {
             background: white;
             border-radius: 16px;
             padding: 16px;
             margin-bottom: 24px;
-            box-shadow: 0 4px 24px rgba(0,0,0,0.1);
+            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.1);
             border: none;
             flex-wrap: wrap;
         }
@@ -103,6 +114,7 @@
             transition: all 0.3s ease;
             margin: 4px;
             white-space: nowrap;
+            font-size: 1rem;
         }
         
         .nav-tabs .nav-link:hover {
@@ -116,179 +128,51 @@
             box-shadow: 0 4px 16px rgba(102, 126, 234, 0.4);
         }
         
-        /* Success Green for Enrollment/Actions */
+        /* ===== COURSE CARDS ===== */
         .course-card {
             border: 2px solid #e8eaf6;
             border-radius: 16px;
             padding: 24px;
             margin-bottom: 16px;
             transition: all 0.3s ease;
-            cursor: pointer;
             background: white;
         }
-        
+
         .course-card:hover {
             border-color: #667eea;
             transform: translateX(4px);
             box-shadow: 0 8px 24px rgba(102, 126, 234, 0.2);
         }
-        
+
         .course-card.enrolled {
-            background: linear-gradient(135deg, rgba(76, 175, 80, 0.1) 0%, rgba(129, 199, 132, 0.1) 100%);
+            background: linear-gradient(135deg, rgba(76, 175, 80, 0.05) 0%, rgba(129, 199, 132, 0.05) 100%);
             border-color: #4caf50;
         }
         
-        /* Action-Oriented Button Styles with Color Psychology */
-        .btn-enroll {
-            background: linear-gradient(135deg, #4caf50 0%, #66bb6a 100%);
-            color: white;
-            border: none;
-            padding: 14px 32px;
-            border-radius: 12px;
-            font-weight: 700;
-            font-size: 1rem;
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 16px rgba(76, 175, 80, 0.3);
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-        
-        .btn-enroll:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 8px 24px rgba(76, 175, 80, 0.5);
-            background: linear-gradient(135deg, #43a047 0%, #5cb860 100%);
-        }
-
-        .btn-enroll:active {
-            transform: translateY(-1px);
-        }
-        
-        /* Warning/Danger - Red for Critical Actions */
-        .btn-drop {
-            background: linear-gradient(135deg, #ef5350 0%, #e53935 100%);
-            color: white;
-            border: none;
-            padding: 10px 24px;
-            border-radius: 10px;
-            font-weight: 700;
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 12px rgba(239, 83, 80, 0.3);
-        }
-        
-        .btn-drop:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(239, 83, 80, 0.5);
-            background: linear-gradient(135deg, #e53935 0%, #c62828 100%);
-        }
-        
-        /* Primary Action - Trust & Confidence (Blue) */
-        .btn-primary {
-            background: linear-gradient(135deg, #1e88e5 0%, #1565c0 100%);
-            border: none;
-            padding: 14px 32px;
-            border-radius: 12px;
-            font-weight: 700;
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 16px rgba(30, 136, 229, 0.3);
-            color: white;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-        
-        .btn-primary:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 8px 24px rgba(30, 136, 229, 0.5);
-            background: linear-gradient(135deg, #1565c0 0%, #0d47a1 100%);
-        }
-
-        /* Secondary Action */
-        .btn-secondary {
-            background: linear-gradient(135deg, #78909c 0%, #546e7a 100%);
-            border: none;
-            padding: 12px 28px;
-            border-radius: 10px;
-            font-weight: 600;
-            color: white;
-        }
-
-        .btn-secondary:hover {
-            background: linear-gradient(135deg, #546e7a 0%, #37474f 100%);
-            transform: translateY(-2px);
-        }
-        
-        /* Danger Button - Logout */
-        .btn-danger {
+        /* ===== BUTTONS ===== */
+        .btn-logout {
             background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%);
             border: none;
-            padding: 10px 24px;
-            border-radius: 10px;
+            padding: 12px 28px;
+            border-radius: 12px;
             font-weight: 700;
+            color: white;
             transition: all 0.3s ease;
-            box-shadow: 0 4px 12px rgba(255, 107, 107, 0.3);
+            font-size: 1rem;
+            cursor: pointer;
         }
-        
-        .btn-danger:hover {
+
+        .btn-logout:hover {
             transform: translateY(-2px);
             box-shadow: 0 6px 20px rgba(255, 107, 107, 0.5);
-            background: linear-gradient(135deg, #ee5a6f 0%, #c92a2a 100%);
-        }
-        
-        /* Badge Styles with Clear Visual Hierarchy */
-        .badge-custom {
-            padding: 8px 16px;
-            border-radius: 20px;
-            font-weight: 700;
-            font-size: 0.85em;
-            letter-spacing: 0.3px;
         }
 
-        .badge-enrolled {
-            background: linear-gradient(135deg, #4caf50 0%, #66bb6a 100%);
-            color: white;
-            box-shadow: 0 2px 8px rgba(76, 175, 80, 0.3);
-        }
-
-        .badge-available {
-            background: linear-gradient(135deg, #42a5f5 0%, #1e88e5 100%);
-            color: white;
-            box-shadow: 0 2px 8px rgba(66, 165, 245, 0.3);
+        /* ===== UTILITY CLASSES ===== */
+        .hidden {
+            display: none !important;
         }
         
-        /* Attendance - Green for Present, Red for Absent */
-        .attendance-day {
-            width: 48px;
-            height: 48px;
-            border-radius: 12px;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            margin: 6px;
-            font-weight: 700;
-            font-size: 0.95em;
-            transition: transform 0.2s ease;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        }
-
-        .attendance-day:hover {
-            transform: scale(1.1);
-        }
-        
-        .attendance-present {
-            background: linear-gradient(135deg, #4caf50 0%, #66bb6a 100%);
-            color: white;
-        }
-        
-        .attendance-absent {
-            background: linear-gradient(135deg, #ef5350 0%, #e53935 100%);
-            color: white;
-        }
-        
-        .attendance-pending {
-            background: #eceff1;
-            color: #78909c;
-        }
-        
-        /* Grade Display - Achievement Colors */
+        /* ===== GRADE ITEMS ===== */
         .grade-item {
             background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
             border-radius: 16px;
@@ -303,40 +187,10 @@
 
         .grade-item:hover {
             transform: translateX(4px);
-            box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
         }
         
-        .grade-score {
-            font-size: 2rem;
-            font-weight: 900;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-        
-        /* Announcements - Urgency Colors */
-        .announcement-item {
-            border-left: 5px solid #42a5f5;
-            background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
-            padding: 24px;
-            border-radius: 0 16px 16px 0;
-            margin-bottom: 16px;
-            transition: all 0.3s ease;
-            box-shadow: 0 2px 12px rgba(0,0,0,0.08);
-        }
-
-        .announcement-item:hover {
-            transform: translateX(4px);
-            box-shadow: 0 4px 20px rgba(0,0,0,0.12);
-        }
-        
-        .announcement-item.important {
-            border-left-color: #ff6b6b;
-            background: linear-gradient(135deg, #fff5f5 0%, #ffffff 100%);
-        }
-        
-        /* Stats Cards - Achievement & Progress */
+        /* ===== STATS GRID ===== */
         .stats-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
@@ -349,14 +203,14 @@
             border-radius: 16px;
             padding: 32px;
             text-align: center;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
             transition: all 0.3s ease;
             border-top: 4px solid #667eea;
         }
 
         .stat-card:hover {
             transform: translateY(-6px);
-            box-shadow: 0 12px 40px rgba(0,0,0,0.18);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.18);
         }
         
         .stat-card i {
@@ -379,204 +233,239 @@
         }
         
         .stat-card p {
-            color: #78909c;
-            margin: 0;
-            font-weight: 600;
-            font-size: 0.95rem;
+            color: #666;
+            font-size: 1rem;
+            font-weight: 500;
         }
         
-        .hidden {
-            display: none !important;
-        }
-        
-        /* Progress Bars - Achievement Visual */
+        /* ===== PROGRESS BARS ===== */
         .progress {
             height: 32px;
             border-radius: 16px;
             background: #eceff1;
             overflow: hidden;
-            box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
         }
         
         .progress-bar {
-            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
-            font-weight: 700;
-            font-size: 0.95rem;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             transition: width 0.6s ease;
         }
-
-        .progress-bar.bg-success {
-            background: linear-gradient(90deg, #4caf50 0%, #66bb6a 100%);
-        }
-
-        /* Form Controls - Clean & Professional */
-        .form-control {
-            border: 2px solid #e0e0e0;
-            border-radius: 12px;
-            padding: 14px 18px;
-            font-size: 1rem;
-            transition: all 0.3s ease;
-        }
-
-        .form-control:focus {
-            border-color: #667eea;
-            box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
-            outline: none;
-        }
-
-        /* Search Box Enhancement */
-        #courseSearch {
-            border: 2px solid #e0e0e0;
-            padding: 16px 20px;
-            border-radius: 14px;
-            font-size: 1.05rem;
-            transition: all 0.3s ease;
-        }
-
-        #courseSearch:focus {
-            border-color: #667eea;
-            box-shadow: 0 4px 20px rgba(102, 126, 234, 0.15);
-        }
-
-        /* Profile Display */
+        
+        /* ===== PROFILE FIELDS ===== */
         .profile-field {
             background: #f8f9fa;
-            padding: 16px 20px;
+            padding: 20px 24px;
             border-radius: 12px;
-            margin-bottom: 12px;
+            margin-bottom: 16px;
             border-left: 4px solid #667eea;
+            transition: all 0.3s ease;
+        }
+
+        .profile-field:hover {
+            background: #e9ecef;
+            transform: translateX(4px);
         }
 
         .profile-field strong {
             color: #2c5364;
             font-weight: 700;
+            display: block;
+            margin-bottom: 8px;
+            font-size: 1rem;
+        }
+        
+        .profile-field p {
+            color: #495057;
+            margin: 0;
+            font-size: 1.1rem;
+        }
+        
+        /* ===== ANNOUNCEMENTS ===== */
+        .announcement-item {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 20px;
+            border-left: 4px solid #667eea;
+            transition: all 0.3s ease;
         }
 
-        /* Responsive Design */
-        @media (max-width: 768px) {
-            .nav-tabs .nav-link {
-                padding: 10px 16px;
-                font-size: 0.9rem;
-            }
-
-            .stat-card {
-                padding: 24px 16px;
-            }
-
-            .attendance-day {
-                width: 40px;
-                height: 40px;
-                margin: 4px;
-            }
+        .announcement-item:hover {
+            background: #e9ecef;
+            transform: translateX(4px);
         }
 
-        /* Animation for page load */
-        @keyframes fadeInUp {
-            from {
-                opacity: 0;
-                transform: translateY(20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
+        .announcement-item h5 {
+            color: #2c5364;
+            margin-bottom: 12px;
+            font-weight: 700;
+            font-size: 1.25rem;
         }
 
-        .card {
-            animation: fadeInUp 0.5s ease;
+        .announcement-item p {
+            color: #495057;
+            margin-bottom: 8px;
+            line-height: 1.5;
+        }
+
+        .announcement-item small {
+            color: #6c757d;
+            font-size: 0.875rem;
+        }
+        
+        /* ===== LOADING SCREEN ===== */
+        .loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+        
+        .loading-content {
+            text-align: center;
+            color: white;
+        }
+        
+        .loading-spinner {
+            width: 60px;
+            height: 60px;
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: #667eea;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        /* ===== TAB CONTENT ===== */
+        .tab-content {
+            animation: fadeIn 0.5s ease;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        /* ===== ALERTS & MESSAGES ===== */
+        .alert-message {
+            background: linear-gradient(135deg, #ffecb3 0%, #ffd54f 100%);
+            border-radius: 12px;
+            padding: 16px 20px;
+            margin-bottom: 20px;
+            border-left: 4px solid #ff9800;
+        }
+        
+        .alert-message i {
+            color: #ff9800;
+            margin-right: 10px;
+        }
+        
+        /* ===== BADGES ===== */
+        .badge {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 0.85rem;
+        }
+        
+        /* ===== TEXT UTILITIES ===== */
+        .text-gradient {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        /* ===== SPINNERS ===== */
+        .spinner-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 200px;
+        }
+        
+        /* ===== EMPTY STATES ===== */
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: #6c757d;
+        }
+        
+        .empty-state i {
+            font-size: 48px;
+            color: #adb5bd;
+            margin-bottom: 16px;
         }
     </style>
 </head>
 <body>
     <div class="container main-container">
-        
-        <!-- LOGIN SCREEN -->
-        <div id="loginScreen" class="card">
-            <div class="card-header">
-                <h2 class="text-center mb-2"><i class="fas fa-graduation-cap me-2"></i>Student Portal Login</h2>
-                <p class="text-center mb-0 opacity-90">Access your academic dashboard</p>
-            </div>
-            <div class="card-body">
-                <form id="loginForm">
-                    <div class="mb-3">
-                        <label for="loginEmail" class="form-label fw-bold">Email Address</label>
-                        <input type="email" class="form-control" id="loginEmail" placeholder="student@school.com" required>
-                    </div>
-                    <div class="mb-4">
-                        <label for="loginPassword" class="form-label fw-bold">Password</label>
-                        <input type="password" class="form-control" id="loginPassword" placeholder="Enter your password" required>
-                    </div>
-                    <div class="alert alert-info border-0 rounded-3 mb-4">
-                        <strong><i class="fas fa-info-circle me-2"></i>Demo Credentials:</strong><br>
-                        Email: student@school.com<br>
-                        Password: student123
-                    </div>
-                    <div class="d-grid gap-3">
-                        <button type="submit" class="btn btn-primary">
-                            <i class="fas fa-sign-in-alt me-2"></i>Login to Dashboard
-                        </button>
-                        <button type="button" class="btn btn-secondary" onclick="window.location.href='login.html'">
-                            <i class="fas fa-arrow-left me-2"></i>Back to Main Login
-                        </button>
-                    </div>
-                </form>
+        <!-- Loading Screen -->
+        <div id="loadingScreen" class="card">
+            <div class="card-body text-center py-5">
+                <div class="loading-spinner mb-4"></div>
+                <h3 class="mb-3">Loading your dashboard</h3>
+                <p id="loadingStatus" class="text-muted">Initializing...</p>
             </div>
         </div>
         
-        <!-- STUDENT DASHBOARD -->
+        <!-- Student Dashboard -->
         <div id="studentDashboard" class="hidden">
+            <!-- Header with welcome message and logout -->
             <div class="nav-header">
                 <div>
                     <h4><i class="fas fa-user-graduate me-2"></i>Student Dashboard</h4>
-                    <small>Welcome back, <span id="studentName"></span>!</small>
+                    <small>Welcome back, <span id="studentName">Student</span>!</small>
                 </div>
-                <button class="btn btn-danger btn-sm" onclick="logout()">
+                <button class="btn btn-logout" onclick="logout()">
                     <i class="fas fa-sign-out-alt me-2"></i>Logout
                 </button>
             </div>
             
             <!-- Navigation Tabs -->
-            <ul class="nav nav-tabs" role="tablist">
-                <li class="nav-item">
-                    <a class="nav-link active" data-bs-toggle="tab" href="#overview">
+            <ul class="nav nav-tabs" id="dashboardTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="overview-tab" data-bs-toggle="tab" data-bs-target="#overview" type="button" role="tab">
                         <i class="fas fa-home me-2"></i>Overview
-                    </a>
+                    </button>
                 </li>
-                <li class="nav-item">
-                    <a class="nav-link" data-bs-toggle="tab" href="#courses">
-                        <i class="fas fa-book me-2"></i>Courses
-                    </a>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="courses-tab" data-bs-toggle="tab" data-bs-target="#courses" type="button" role="tab">
+                        <i class="fas fa-book me-2"></i>My Courses
+                    </button>
                 </li>
-                <li class="nav-item">
-                    <a class="nav-link" data-bs-toggle="tab" href="#grades">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="grades-tab" data-bs-toggle="tab" data-bs-target="#grades" type="button" role="tab">
                         <i class="fas fa-chart-line me-2"></i>Grades
-                    </a>
+                    </button>
                 </li>
-                <li class="nav-item">
-                    <a class="nav-link" data-bs-toggle="tab" href="#attendance">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="attendance-tab" data-bs-toggle="tab" data-bs-target="#attendance" type="button" role="tab">
                         <i class="fas fa-calendar-check me-2"></i>Attendance
-                    </a>
+                    </button>
                 </li>
-                <li class="nav-item">
-                    <a class="nav-link" data-bs-toggle="tab" href="#announcements">
-                        <i class="fas fa-bullhorn me-2"></i>News
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" data-bs-toggle="tab" href="#profile">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="profile-tab" data-bs-toggle="tab" data-bs-target="#profile" type="button" role="tab">
                         <i class="fas fa-user me-2"></i>Profile
-                    </a>
+                    </button>
                 </li>
             </ul>
             
-            <!-- Tab Content -->
-            <div class="tab-content">
-                
+            <!-- Tab Content Panes -->
+            <div class="tab-content" id="dashboardTabsContent">
                 <!-- OVERVIEW TAB -->
-                <div id="overview" class="tab-pane fade show active">
+                <div class="tab-pane fade show active" id="overview" role="tabpanel">
                     <div class="stats-grid">
                         <div class="stat-card">
                             <i class="fas fa-book-open"></i>
@@ -599,489 +488,87 @@
                         <div class="card-header">
                             <h3><i class="fas fa-bell me-2"></i>Recent Announcements</h3>
                         </div>
-                        <div class="card-body" id="recentAnnouncements"></div>
+                        <div class="card-body" id="recentAnnouncements">
+                            <div class="spinner-container">
+                                <div class="spinner-border text-primary" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 
                 <!-- COURSES TAB -->
-                <div id="courses" class="tab-pane fade">
-                    <div class="card">
-                        <div class="card-header">
-                            <h3><i class="fas fa-book-open me-2"></i>Available Courses</h3>
-                        </div>
-                        <div class="card-body">
-                            <div class="mb-4">
-                                <input type="text" class="form-control" id="courseSearch" placeholder="🔍 Search courses by name, code, or instructor...">
-                            </div>
-                            <div id="coursesList"></div>
-                        </div>
-                    </div>
-                    
+                <div class="tab-pane fade" id="courses" role="tabpanel">
                     <div class="card">
                         <div class="card-header">
                             <h3><i class="fas fa-graduation-cap me-2"></i>My Enrolled Courses</h3>
                         </div>
-                        <div class="card-body" id="enrolledCoursesList"></div>
+                        <div class="card-body" id="enrolledCoursesList">
+                            <div class="spinner-container">
+                                <div class="spinner-border text-primary" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 
                 <!-- GRADES TAB -->
-                <div id="grades" class="tab-pane fade">
+                <div class="tab-pane fade" id="grades" role="tabpanel">
                     <div class="card">
                         <div class="card-header">
                             <h3><i class="fas fa-chart-bar me-2"></i>Academic Performance</h3>
                         </div>
-                        <div class="card-body">
-                            <div class="mb-5">
-                                <h5 class="fw-bold mb-3">Overall GPA</h5>
-                                <div class="d-flex align-items-center gap-3">
-                                    <div class="progress flex-grow-1">
-                                        <div class="progress-bar" id="gpaProgress" role="progressbar"></div>
-                                    </div>
-                                    <h3 class="mb-0 fw-bold" id="gpaDisplay" style="font-size: 2rem; color: #667eea;">0.0</h3>
+                        <div class="card-body" id="gradesContent">
+                            <div class="spinner-container">
+                                <div class="spinner-border text-primary" role="status">
+                                    <span class="visually-hidden">Loading...</span>
                                 </div>
                             </div>
-                            <div id="gradesList"></div>
                         </div>
                     </div>
                 </div>
                 
                 <!-- ATTENDANCE TAB -->
-                <div id="attendance" class="tab-pane fade">
+                <div class="tab-pane fade" id="attendance" role="tabpanel">
                     <div class="card">
                         <div class="card-header">
                             <h3><i class="fas fa-calendar-alt me-2"></i>Attendance Record</h3>
                         </div>
-                        <div class="card-body">
-                            <div class="mb-5">
-                                <h5 class="fw-bold mb-3">Overall Attendance Rate</h5>
-                                <div class="progress mb-3">
-                                    <div class="progress-bar bg-success" id="attendanceProgress" role="progressbar"></div>
-                                </div>
-                                <div class="d-flex justify-content-around text-center">
-                                    <div>
-                                        <i class="fas fa-check-circle text-success" style="font-size: 1.5rem;"></i>
-                                        <div class="mt-2"><strong style="font-size: 1.5rem;" id="presentCount">0</strong></div>
-                                        <small class="text-muted">Present</small>
-                                    </div>
-                                    <div>
-                                        <i class="fas fa-times-circle text-danger" style="font-size: 1.5rem;"></i>
-                                        <div class="mt-2"><strong style="font-size: 1.5rem;" id="absentCount">0</strong></div>
-                                        <small class="text-muted">Absent</small>
-                                    </div>
-                                    <div>
-                                        <i class="fas fa-calendar text-primary" style="font-size: 1.5rem;"></i>
-                                        <div class="mt-2"><strong style="font-size: 1.5rem;" id="totalDays">0</strong></div>
-                                        <small class="text-muted">Total Days</small>
-                                    </div>
+                        <div class="card-body" id="attendanceContent">
+                            <div class="spinner-container">
+                                <div class="spinner-border text-primary" role="status">
+                                    <span class="visually-hidden">Loading...</span>
                                 </div>
                             </div>
-                            <div id="attendanceDetails"></div>
                         </div>
-                    </div>
-                </div>
-                
-                <!-- ANNOUNCEMENTS TAB -->
-                <div id="announcements" class="tab-pane fade">
-                    <div class="card">
-                        <div class="card-header">
-                            <h3><i class="fas fa-bullhorn me-2"></i>All Announcements</h3>
-                        </div>
-                        <div class="card-body" id="allAnnouncements"></div>
                     </div>
                 </div>
                 
                 <!-- PROFILE TAB -->
-                <div id="profile" class="tab-pane fade">
+                <div class="tab-pane fade" id="profile" role="tabpanel">
                     <div class="card">
                         <div class="card-header">
                             <h3><i class="fas fa-id-card me-2"></i>My Profile</h3>
                         </div>
-                        <div class="card-body">
-                            <div id="profileDisplay"></div>
+                        <div class="card-body" id="profileDisplay">
+                            <div class="spinner-container">
+                                <div class="spinner-border text-primary" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
-                
             </div>
         </div>
     </div>
     
+    <!-- Bootstrap JavaScript Bundle -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script>
-    <script>
-        // Initialize data storage
-        function initializeSystem() {
-            const stored = sessionStorage.getItem('enhancedSystem');
-            if (stored) return JSON.parse(stored);
-            
-            const system = {
-                users: {
-                    'student@school.com': {
-                        password: 'student123',
-                        role: 'student',
-                        firstName: 'John',
-                        lastName: 'Doe',
-                        studentId: 'STU001',
-                        program: 'Computer Science',
-                        year: '3',
-                        email: 'student@school.com',
-                        phone: '+1234567890',
-                        dob: '2000-01-15',
-                        gender: 'Male',
-                        city: 'New York',
-                        address: '123 Main Street',
-                        enrolledCourses: ['CS101', 'CS201', 'MATH301']
-                    }
-                },
-                courses: [
-                    { id: 'CS101', name: 'Introduction to Programming', credits: 3, instructor: 'Dr. Smith', schedule: 'Mon/Wed 10:00 AM' },
-                    { id: 'CS201', name: 'Data Structures', credits: 4, instructor: 'Prof. Johnson', schedule: 'Tue/Thu 2:00 PM' },
-                    { id: 'MATH301', name: 'Calculus III', credits: 3, instructor: 'Dr. Williams', schedule: 'Mon/Wed 1:00 PM' },
-                    { id: 'ENG101', name: 'English Composition', credits: 3, instructor: 'Prof. Brown', schedule: 'Tue/Thu 9:00 AM' },
-                    { id: 'PHYS201', name: 'Physics II', credits: 4, instructor: 'Dr. Davis', schedule: 'Mon/Wed/Fri 11:00 AM' },
-                    { id: 'CS301', name: 'Database Systems', credits: 3, instructor: 'Prof. Miller', schedule: 'Tue/Thu 3:30 PM' }
-                ],
-                grades: {
-                    'student@school.com': [
-                        { courseId: 'CS101', courseName: 'Introduction to Programming', grade: 3.7, letterGrade: 'A-' },
-                        { courseId: 'CS201', courseName: 'Data Structures', grade: 3.3, letterGrade: 'B+' },
-                        { courseId: 'MATH301', courseName: 'Calculus III', grade: 3.0, letterGrade: 'B' }
-                    ]
-                },
-                attendance: {
-                    'student@school.com': {
-                        'CS101': [1,1,1,0,1,1,1,1,0,1,1,1,1,1,0],
-                        'CS201': [1,1,1,1,1,0,1,1,1,1,1,1,0,1,1],
-                        'MATH301': [1,0,1,1,1,1,1,1,1,1,0,1,1,1,1]
-                    }
-                },
-                announcements: [
-                    { id: 1, title: 'Midterm Exam Schedule Released', content: 'Midterm exams will be held from March 15-20. Please check your course portals for specific dates and times.', date: '2024-03-01', important: true },
-                    { id: 2, title: 'Library Hours Extended', content: 'Great news! The library will now be open until 10 PM on weekdays to accommodate student study needs during exam season.', date: '2024-03-02', important: false },
-                    { id: 3, title: 'Career Fair Next Week', content: 'Don\'t miss our annual career fair on March 10! Over 50 top companies will be present. Dress professionally and bring copies of your resume.', date: '2024-03-03', important: false },
-                    { id: 4, title: 'Spring Break Reminder', content: 'Spring break is from March 25-29. All classes are suspended. Classes will resume on Monday, April 1st.', date: '2024-03-05', important: false }
-                ]
-            };
-            
-            saveSystem(system);
-            return system;
-        }
-        
-        function saveSystem(system) {
-            sessionStorage.setItem('enhancedSystem', JSON.stringify(system));
-        }
-        
-        let system = initializeSystem();
-        let currentUser = null;
-        
-        // Login Handler
-        document.getElementById('loginForm').addEventListener('submit', function(e) {
-            e.preventDefault();
-            const email = document.getElementById('loginEmail').value;
-            const password = document.getElementById('loginPassword').value;
-            
-            if (system.users[email] && system.users[email].password === password) {
-                currentUser = system.users[email];
-                showDashboard();
-            } else {
-                alert('Invalid credentials! Please check your email and password.');
-            }
-        });
-        
-        function showDashboard() {
-            document.getElementById('loginScreen').classList.add('hidden');
-            document.getElementById('studentDashboard').classList.remove('hidden');
-            document.getElementById('studentName').textContent = currentUser.firstName + ' ' + currentUser.lastName;
-            
-            loadOverview();
-            loadCourses();
-            loadGrades();
-            loadAttendance();
-            loadAnnouncements();
-            loadProfile();
-        }
-        
-        function loadOverview() {
-            const enrolled = currentUser.enrolledCourses || [];
-            document.getElementById('enrolledCoursesCount').textContent = enrolled.length;
-            
-            const grades = system.grades[currentUser.email] || [];
-            const avgGrade = grades.length > 0 
-                ? (grades.reduce((sum, g) => sum + g.grade, 0) / grades.length).toFixed(2)
-                : '0.0';
-            document.getElementById('averageGrade').textContent = avgGrade;
-            
-            const attendance = calculateAttendance();
-            document.getElementById('attendanceRate').textContent = attendance + '%';
-            
-            const recent = system.announcements.slice(0, 3);
-            const html = recent.map(ann => `
-                <div class="announcement-item ${ann.important ? 'important' : ''}">
-                    <div class="d-flex justify-content-between align-items-start mb-2">
-                        <h5 class="mb-0 fw-bold">${ann.important ? '<i class="fas fa-exclamation-triangle text-danger me-2"></i>' : ''}${ann.title}</h5>
-                        <small class="text-muted fw-semibold">${ann.date}</small>
-                    </div>
-                    <p class="mb-0">${ann.content}</p>
-                </div>
-            `).join('');
-            document.getElementById('recentAnnouncements').innerHTML = html || '<p class="text-muted">No announcements available.</p>';
-        }
-        
-        function calculateAttendance() {
-            const attendance = system.attendance[currentUser.email] || {};
-            let totalPresent = 0;
-            let totalDays = 0;
-            
-            for (const courseId in attendance) {
-                const record = attendance[courseId];
-                totalPresent += record.filter(d => d === 1).length;
-                totalDays += record.length;
-            }
-            
-            return totalDays > 0 ? ((totalPresent / totalDays) * 100).toFixed(0) : 0;
-        }
-        
-        function loadCourses() {
-            const enrolled = currentUser.enrolledCourses || [];
-            
-            document.getElementById('courseSearch').addEventListener('input', function(e) {
-                const term = e.target.value.toLowerCase();
-                const filtered = system.courses.filter(c => 
-                    c.name.toLowerCase().includes(term) || 
-                    c.id.toLowerCase().includes(term) ||
-                    c.instructor.toLowerCase().includes(term)
-                );
-                renderCoursesList(filtered);
-            });
-            
-            renderCoursesList(system.courses);
-            renderEnrolledCourses();
-        }
-        
-        function renderCoursesList(courses) {
-            const enrolled = currentUser.enrolledCourses || [];
-            const html = courses.map(course => `
-                <div class="course-card ${enrolled.includes(course.id) ? 'enrolled' : ''}" onclick="toggleEnrollment('${course.id}')">
-                    <div class="d-flex justify-content-between align-items-start">
-                        <div class="flex-grow-1">
-                            <h5 class="mb-2 fw-bold">${course.name}</h5>
-                            <p class="text-muted mb-2"><strong>${course.id}</strong> • ${course.instructor}</p>
-                            <small class="text-muted"><i class="fas fa-clock me-1"></i>${course.schedule}</small>
-                        </div>
-                        <div class="text-end ms-3">
-                            <span class="badge bg-primary badge-custom mb-2">${course.credits} Credits</span><br>
-                            ${enrolled.includes(course.id) 
-                                ? '<span class="badge badge-enrolled"><i class="fas fa-check me-1"></i>Enrolled</span>'
-                                : '<span class="badge badge-available">Available</span>'}
-                        </div>
-                    </div>
-                </div>
-            `).join('');
-            document.getElementById('coursesList').innerHTML = html;
-        }
-        
-        function renderEnrolledCourses() {
-            const enrolled = currentUser.enrolledCourses || [];
-            const courses = system.courses.filter(c => enrolled.includes(c.id));
-            
-            if (courses.length === 0) {
-                document.getElementById('enrolledCoursesList').innerHTML = '<p class="text-muted">You haven\'t enrolled in any courses yet. Browse available courses above to get started!</p>';
-                return;
-            }
-            
-            const html = courses.map(course => `
-                <div class="course-card enrolled">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h5 class="mb-2 fw-bold">${course.name}</h5>
-                            <p class="text-muted mb-0"><strong>${course.id}</strong> • ${course.instructor} • ${course.schedule}</p>
-                        </div>
-                        <button class="btn btn-drop" onclick="event.stopPropagation(); toggleEnrollment('${course.id}')">
-                            <i class="fas fa-times me-1"></i>Drop Course
-                        </button>
-                    </div>
-                </div>
-            `).join('');
-            document.getElementById('enrolledCoursesList').innerHTML = html;
-        }
-        
-        function toggleEnrollment(courseId) {
-            if (!currentUser.enrolledCourses) currentUser.enrolledCourses = [];
-            
-            const index = currentUser.enrolledCourses.indexOf(courseId);
-            const course = system.courses.find(c => c.id === courseId);
-            
-            if (index > -1) {
-                if (confirm(`Are you sure you want to drop ${course.name}?`)) {
-                    currentUser.enrolledCourses.splice(index, 1);
-                    alert(`✓ Successfully dropped ${course.name}`);
-                }
-            } else {
-                currentUser.enrolledCourses.push(courseId);
-                alert(`✓ Successfully enrolled in ${course.name}!`);
-            }
-            
-            system.users[currentUser.email] = currentUser;
-            saveSystem(system);
-            
-            renderCoursesList(system.courses);
-            renderEnrolledCourses();
-            loadOverview();
-        }
-        
-        function loadGrades() {
-            const grades = system.grades[currentUser.email] || [];
-            
-            if (grades.length === 0) {
-                document.getElementById('gradesList').innerHTML = '<p class="text-muted">No grades available yet. Keep up the good work!</p>';
-                document.getElementById('gpaDisplay').textContent = '0.0';
-                document.getElementById('gpaProgress').style.width = '0%';
-                document.getElementById('gpaProgress').textContent = '0.0';
-                return;
-            }
-            
-            const gpa = (grades.reduce((sum, g) => sum + g.grade, 0) / grades.length).toFixed(2);
-            document.getElementById('gpaDisplay').textContent = gpa;
-            const percentage = (gpa / 4.0 * 100).toFixed(0);
-            document.getElementById('gpaProgress').style.width = percentage + '%';
-            document.getElementById('gpaProgress').textContent = gpa + ' GPA';
-            
-            const html = grades.map(grade => `
-                <div class="grade-item">
-                    <div>
-                        <h5 class="mb-1 fw-bold">${grade.courseName}</h5>
-                        <small class="text-muted fw-semibold">${grade.courseId}</small>
-                    </div>
-                    <div class="text-end">
-                        <div class="grade-score">${grade.letterGrade}</div>
-                        <small class="text-muted fw-bold">${grade.grade.toFixed(2)} GPA</small>
-                    </div>
-                </div>
-            `).join('');
-            document.getElementById('gradesList').innerHTML = html;
-        }
-        
-        function loadAttendance() {
-            const attendance = system.attendance[currentUser.email] || {};
-            let totalPresent = 0;
-            let totalDays = 0;
-            
-            let html = '';
-            for (const courseId in attendance) {
-                const record = attendance[courseId];
-                const present = record.filter(d => d === 1).length;
-                const total = record.length;
-                totalPresent += present;
-                totalDays += total;
-                
-                const course = system.courses.find(c => c.id === courseId);
-                const percentage = ((present / total) * 100).toFixed(0);
-                
-                html += `
-                    <div class="mb-5">
-                        <h5 class="fw-bold mb-3">${course ? course.name : courseId}</h5>
-                        <div class="mb-3">
-                            ${record.map((day, i) => `
-                                <span class="attendance-day ${day === 1 ? 'attendance-present' : 'attendance-absent'}">
-                                    ${i + 1}
-                                </span>
-                            `).join('')}
-                        </div>
-                        <div class="progress mb-2">
-                            <div class="progress-bar bg-success" style="width: ${percentage}%">${percentage}%</div>
-                        </div>
-                        <small class="text-muted fw-semibold">${present} present out of ${total} days</small>
-                    </div>
-                `;
-            }
-            
-            document.getElementById('attendanceDetails').innerHTML = html || '<p class="text-muted">No attendance records available.</p>';
-            
-            const overallRate = totalDays > 0 ? ((totalPresent / totalDays) * 100).toFixed(0) : 0;
-            document.getElementById('attendanceProgress').style.width = overallRate + '%';
-            document.getElementById('attendanceProgress').textContent = overallRate + '%';
-            document.getElementById('presentCount').textContent = totalPresent;
-            document.getElementById('absentCount').textContent = totalDays - totalPresent;
-            document.getElementById('totalDays').textContent = totalDays;
-        }
-        
-        function loadAnnouncements() {
-            const html = system.announcements.map(ann => `
-                <div class="announcement-item ${ann.important ? 'important' : ''}">
-                    <div class="d-flex justify-content-between align-items-start mb-3">
-                        <h5 class="mb-0 fw-bold">${ann.important ? '<i class="fas fa-exclamation-triangle text-danger me-2"></i>' : ''}${ann.title}</h5>
-                        <small class="text-muted fw-semibold">${ann.date}</small>
-                    </div>
-                    <p class="mb-0">${ann.content}</p>
-                </div>
-            `).join('');
-            document.getElementById('allAnnouncements').innerHTML = html || '<p class="text-muted">No announcements available.</p>';
-        }
-        
-        function loadProfile() {
-            const html = `
-                <div class="row">
-                    <div class="col-md-6 mb-3">
-                        <div class="profile-field">
-                            <strong>Student ID:</strong> ${currentUser.studentId}
-                        </div>
-                    </div>
-                    <div class="col-md-6 mb-3">
-                        <div class="profile-field">
-                            <strong>Full Name:</strong> ${currentUser.firstName} ${currentUser.lastName}
-                        </div>
-                    </div>
-                    <div class="col-md-6 mb-3">
-                        <div class="profile-field">
-                            <strong>Email:</strong> ${currentUser.email}
-                        </div>
-                    </div>
-                    <div class="col-md-6 mb-3">
-                        <div class="profile-field">
-                            <strong>Phone:</strong> ${currentUser.phone}
-                        </div>
-                    </div>
-                    <div class="col-md-6 mb-3">
-                        <div class="profile-field">
-                            <strong>Date of Birth:</strong> ${currentUser.dob}
-                        </div>
-                    </div>
-                    <div class="col-md-6 mb-3">
-                        <div class="profile-field">
-                            <strong>Gender:</strong> ${currentUser.gender}
-                        </div>
-                    </div>
-                    <div class="col-md-6 mb-3">
-                        <div class="profile-field">
-                            <strong>City:</strong> ${currentUser.city}
-                        </div>
-                    </div>
-                    <div class="col-md-6 mb-3">
-                        <div class="profile-field">
-                            <strong>Program:</strong> ${currentUser.program}
-                        </div>
-                    </div>
-                    <div class="col-md-6 mb-3">
-                        <div class="profile-field">
-                            <strong>Academic Year:</strong> Year ${currentUser.year}
-                        </div>
-                    </div>
-                    <div class="col-12 mb-3">
-                        <div class="profile-field">
-                            <strong>Address:</strong> ${currentUser.address}
-                        </div>
-                    </div>
-                </div>
-            `;
-            document.getElementById('profileDisplay').innerHTML = html;
-        }
-        
-        function logout() {
-            currentUser = null;
-            document.getElementById('loginForm').reset();
-            document.getElementById('studentDashboard').classList.add('hidden');
-            document.getElementById('loginScreen').classList.remove('hidden');
-        }
-    </script>
+    
+    <!-- Your student.js file (loaded as module) -->
+    <script type="module" src="student.js"></script>
 </body>
 </html>

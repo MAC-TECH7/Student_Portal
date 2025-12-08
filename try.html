@@ -1,0 +1,453 @@
+[file name]: admin.js
+[file content begin]
+// admin.js - Enhanced with Firebase Admin Functions
+// ------------------------------------------------
+// Admin functions:
+// - Restrict admin-only pages
+// - View list of students
+// - Delete students
+// - Manage student reports
+// - Course management
+// - Grade management
+// - Attendance management
+// - Announcement management
+// ------------------------------------------------
+
+import { auth, db, storage } from "./firebase.js";
+import { onUserStateChanged } from "./auth.js";
+import {
+    collection,
+    getDocs,
+    deleteDoc,
+    doc,
+    getDoc,
+    addDoc,
+    updateDoc,
+    query,
+    where,
+    orderBy
+} from "https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js";
+
+import {
+    ref,
+    uploadBytes,
+    getDownloadURL,
+    deleteObject
+} from "https://www.gstatic.com/firebasejs/10.7.0/firebase-storage.js";
+
+// =============== CHECK ADMIN ROLE ===============
+export async function checkAdminRole() {
+    return new Promise(async (resolve) => {
+        onUserStateChanged(async (user) => {
+            if (!user) {
+                window.location.href = "login.html";
+                resolve(false);
+                return;
+            }
+
+            const snap = await getDoc(doc(db, "users", user.uid));
+            const data = snap.data();
+
+            if (data.role !== "admin") {
+                alert("Admins only!");
+                window.location.href = "student.html";
+                resolve(false);
+                return;
+            }
+            
+            resolve(true);
+        });
+    });
+}
+
+// =============== GET ALL STUDENTS ===============
+export async function getAllStudents() {
+    const students = [];
+    const querySnap = await getDocs(query(
+        collection(db, "users"),
+        where("role", "==", "student")
+    ));
+
+    querySnap.forEach((docSnap) => {
+        students.push({ id: docSnap.id, ...docSnap.data() });
+    });
+
+    return students;
+}
+
+// =============== GET STUDENT BY ID ===============
+export async function getStudentById(uid) {
+    const snap = await getDoc(doc(db, "users", uid));
+    return snap.exists() ? { id: snap.id, ...snap.data() } : null;
+}
+
+// =============== ADD/UPDATE STUDENT ===============
+export async function saveStudent(studentData, uid = null) {
+    try {
+        if (uid) {
+            // Update existing student
+            await updateDoc(doc(db, "users", uid), studentData);
+            return { success: true, uid };
+        } else {
+            // Add new student (Note: Authentication should be handled separately)
+            // For now, we'll add to Firestore only
+            const docRef = await addDoc(collection(db, "users"), {
+                ...studentData,
+                role: "student",
+                createdAt: new Date()
+            });
+            return { success: true, uid: docRef.id };
+        }
+    } catch (error) {
+        console.error("Error saving student:", error);
+        return { success: false, message: error.message };
+    }
+}
+
+// =============== DELETE A STUDENT ===============
+export async function deleteStudent(uid) {
+    try {
+        // Delete student document
+        await deleteDoc(doc(db, "users", uid));
+        
+        // Delete student's profile photo if exists
+        try {
+            const storageRef = ref(storage, `students/${uid}.jpg`);
+            await deleteObject(storageRef);
+        } catch (storageError) {
+            // Photo might not exist, ignore error
+            console.log("No profile photo to delete");
+        }
+        
+        return { success: true };
+    } catch (error) {
+        console.error("Error deleting student:", error);
+        return { success: false, message: error.message };
+    }
+}
+
+// =============== GET ALL COURSES ===============
+export async function getAllCourses() {
+    const courses = [];
+    const querySnap = await getDocs(collection(db, "courses"));
+
+    querySnap.forEach((docSnap) => {
+        courses.push({ id: docSnap.id, ...docSnap.data() });
+    });
+
+    return courses;
+}
+
+// =============== SAVE COURSE ===============
+export async function saveCourse(courseData, courseId = null) {
+    try {
+        if (courseId) {
+            // Update existing course
+            await updateDoc(doc(db, "courses", courseId), courseData);
+            return { success: true, courseId };
+        } else {
+            // Add new course
+            const docRef = await addDoc(collection(db, "courses"), {
+                ...courseData,
+                createdAt: new Date(),
+                enrolled: 0
+            });
+            return { success: true, courseId: docRef.id };
+        }
+    } catch (error) {
+        console.error("Error saving course:", error);
+        return { success: false, message: error.message };
+    }
+}
+
+// =============== DELETE COURSE ===============
+export async function deleteCourse(courseId) {
+    try {
+        await deleteDoc(doc(db, "courses", courseId));
+        return { success: true };
+    } catch (error) {
+        console.error("Error deleting course:", error);
+        return { success: false, message: error.message };
+    }
+}
+
+// =============== GET STUDENT GRADES ===============
+export async function getStudentGrades(studentId) {
+    const grades = [];
+    const querySnap = await getDocs(query(
+        collection(db, "grades"),
+        where("studentId", "==", studentId)
+    ));
+
+    querySnap.forEach((docSnap) => {
+        grades.push({ id: docSnap.id, ...docSnap.data() });
+    });
+
+    return grades;
+}
+
+// =============== SAVE GRADE ===============
+export async function saveGrade(gradeData, gradeId = null) {
+    try {
+        if (gradeId) {
+            // Update existing grade
+            await updateDoc(doc(db, "grades", gradeId), gradeData);
+            return { success: true, gradeId };
+        } else {
+            // Add new grade
+            const docRef = await addDoc(collection(db, "grades"), {
+                ...gradeData,
+                date: new Date()
+            });
+            return { success: true, gradeId: docRef.id };
+        }
+    } catch (error) {
+        console.error("Error saving grade:", error);
+        return { success: false, message: error.message };
+    }
+}
+
+// =============== DELETE GRADE ===============
+export async function deleteGrade(gradeId) {
+    try {
+        await deleteDoc(doc(db, "grades", gradeId));
+        return { success: true };
+    } catch (error) {
+        console.error("Error deleting grade:", error);
+        return { success: false, message: error.message };
+    }
+}
+
+// =============== GET ATTENDANCE RECORDS ===============
+export async function getAttendanceRecords(courseId = null, date = null) {
+    let q = query(collection(db, "attendance"), orderBy("date", "desc"));
+    
+    if (courseId) {
+        q = query(q, where("courseId", "==", courseId));
+    }
+    
+    if (date) {
+        q = query(q, where("date", "==", date));
+    }
+
+    const records = [];
+    const querySnap = await getDocs(q);
+
+    querySnap.forEach((docSnap) => {
+        records.push({ id: docSnap.id, ...docSnap.data() });
+    });
+
+    return records;
+}
+
+// =============== SAVE ATTENDANCE ===============
+export async function saveAttendance(attendanceData, recordId = null) {
+    try {
+        if (recordId) {
+            // Update existing attendance
+            await updateDoc(doc(db, "attendance", recordId), attendanceData);
+            return { success: true, recordId };
+        } else {
+            // Add new attendance
+            const docRef = await addDoc(collection(db, "attendance"), attendanceData);
+            return { success: true, recordId: docRef.id };
+        }
+    } catch (error) {
+        console.error("Error saving attendance:", error);
+        return { success: false, message: error.message };
+    }
+}
+
+// =============== BULK SAVE ATTENDANCE ===============
+export async function saveBulkAttendance(attendanceRecords) {
+    try {
+        const batchPromises = attendanceRecords.map(record => 
+            addDoc(collection(db, "attendance"), record)
+        );
+        
+        await Promise.all(batchPromises);
+        return { success: true };
+    } catch (error) {
+        console.error("Error saving bulk attendance:", error);
+        return { success: false, message: error.message };
+    }
+}
+
+// =============== GET ANNOUNCEMENTS ===============
+export async function getAnnouncements() {
+    const announcements = [];
+    const querySnap = await getDocs(query(
+        collection(db, "announcements"),
+        orderBy("date", "desc")
+    ));
+
+    querySnap.forEach((docSnap) => {
+        announcements.push({ id: docSnap.id, ...docSnap.data() });
+    });
+
+    return announcements;
+}
+
+// =============== SAVE ANNOUNCEMENT ===============
+export async function saveAnnouncement(announcementData, announcementId = null) {
+    try {
+        if (announcementId) {
+            // Update existing announcement
+            await updateDoc(doc(db, "announcements", announcementId), announcementData);
+            return { success: true, announcementId };
+        } else {
+            // Add new announcement
+            const docRef = await addDoc(collection(db, "announcements"), {
+                ...announcementData,
+                date: new Date()
+            });
+            return { success: true, announcementId: docRef.id };
+        }
+    } catch (error) {
+        console.error("Error saving announcement:", error);
+        return { success: false, message: error.message };
+    }
+}
+
+// =============== DELETE ANNOUNCEMENT ===============
+export async function deleteAnnouncement(announcementId) {
+    try {
+        await deleteDoc(doc(db, "announcements", announcementId));
+        return { success: true };
+    } catch (error) {
+        console.error("Error deleting announcement:", error);
+        return { success: false, message: error.message };
+    }
+}
+
+// =============== GET SYSTEM STATISTICS ===============
+export async function getSystemStatistics() {
+    try {
+        // Get counts
+        const studentsSnap = await getDocs(query(collection(db, "users"), where("role", "==", "student")));
+        const coursesSnap = await getDocs(collection(db, "courses"));
+        const announcementsSnap = await getDocs(collection(db, "announcements"));
+        
+        // Calculate average grade (simplified)
+        let totalGrade = 0;
+        let gradeCount = 0;
+        const gradesSnap = await getDocs(collection(db, "grades"));
+        gradesSnap.forEach(doc => {
+            const grade = doc.data().grade || 0;
+            totalGrade += grade;
+            gradeCount++;
+        });
+        const avgGrade = gradeCount > 0 ? (totalGrade / gradeCount).toFixed(1) : 0;
+        
+        // Calculate attendance rate (simplified)
+        let presentCount = 0;
+        let totalAttendance = 0;
+        const attendanceSnap = await getDocs(collection(db, "attendance"));
+        attendanceSnap.forEach(doc => {
+            const status = doc.data().status;
+            if (status === 'present') presentCount++;
+            totalAttendance++;
+        });
+        const attendanceRate = totalAttendance > 0 ? ((presentCount / totalAttendance) * 100).toFixed(0) : 0;
+        
+        return {
+            totalStudents: studentsSnap.size,
+            totalCourses: coursesSnap.size,
+            totalAnnouncements: announcementsSnap.size,
+            averageGrade: avgGrade,
+            attendanceRate: attendanceRate,
+            newStudents: Math.min(studentsSnap.size, 5) // Simplified
+        };
+    } catch (error) {
+        console.error("Error getting statistics:", error);
+        return {
+            totalStudents: 0,
+            totalCourses: 0,
+            totalAnnouncements: 0,
+            averageGrade: 0,
+            attendanceRate: 0,
+            newStudents: 0
+        };
+    }
+}
+
+// =============== EXPORT DATA TO CSV ===============
+export async function exportDataToCSV(dataType) {
+    try {
+        let data = [];
+        let filename = '';
+        
+        switch(dataType) {
+            case 'students':
+                data = await getAllStudents();
+                filename = 'students_export.csv';
+                break;
+            case 'courses':
+                data = await getAllCourses();
+                filename = 'courses_export.csv';
+                break;
+            case 'grades':
+                // Get all grades
+                const gradesSnap = await getDocs(collection(db, "grades"));
+                gradesSnap.forEach(doc => {
+                    data.push({ id: doc.id, ...doc.data() });
+                });
+                filename = 'grades_export.csv';
+                break;
+            case 'attendance':
+                data = await getAttendanceRecords();
+                filename = 'attendance_export.csv';
+                break;
+        }
+        
+        if (data.length === 0) {
+            return { success: false, message: 'No data to export' };
+        }
+        
+        // Convert to CSV
+        const headers = Object.keys(data[0]).join(',');
+        const rows = data.map(item => 
+            Object.values(item).map(val => 
+                typeof val === 'string' && val.includes(',') ? `"${val}"` : val
+            ).join(',')
+        );
+        const csv = [headers, ...rows].join('\n');
+        
+        // Create download link
+        const blob = new Blob([csv], { type: 'text/csv' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+        
+        return { success: true };
+    } catch (error) {
+        console.error("Error exporting data:", error);
+        return { success: false, message: error.message };
+    }
+}
+
+// =============== CREATE STUDENT REPORT ===============
+export async function createStudentReport(uid, reportData) {
+    const reportsRef = collection(db, "users", uid, "reports");
+    await addDoc(reportsRef, {
+        ...reportData,
+        date: new Date(),
+        createdBy: auth.currentUser.uid
+    });
+}
+
+// =============== GET STUDENT REPORTS ===============
+export async function getStudentReports(uid) {
+    const reports = [];
+    const querySnap = await getDocs(collection(db, "users", uid, "reports"));
+    querySnap.forEach((docSnap) => {
+        reports.push({ id: docSnap.id, ...docSnap.data() });
+    });
+    return reports;
+}
+[file content end]
