@@ -1,189 +1,501 @@
-// admin.js - Add these imports at the TOP of the file
-import { 
-    getAuth, 
-    onAuthStateChanged, 
-    signOut 
-} from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
+// ====== ADMIN DASHBOARD JAVASCRIPT ======
 
-import { 
-    getFirestore, 
-    doc, 
-    getDoc
-} from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
+// ====== DATA PERSISTENCE ======
+// Initialize data storage
+const STORAGE_KEYS = {
+    STUDENTS: 'eduadmin_students',
+    COURSES: 'eduadmin_courses',
+    GRADES: 'eduadmin_grades',
+    ATTENDANCE: 'eduadmin_attendance',
+    ANNOUNCEMENTS: 'eduadmin_announcements',
+    SETTINGS: 'eduadmin_settings'
+};
 
-import { app } from "./firebase.js";
-
-// Initialize services
-const auth = getAuth(app);
-const db = getFirestore(app);
-
-// Add authentication check at the start
-document.addEventListener('DOMContentLoaded', function() {
-    checkAdminAuth();
-});
-
-async function checkAdminAuth() {
-    onAuthStateChanged(auth, async (user) => {
-        if (!user) {
-            window.location.href = "login.html";
-            return;
-        }
-        
-        try {
-            // Get user document from Firestore
-            const userDoc = await getDoc(doc(db, "users", user.uid));
-            
-            if (!userDoc.exists()) {
-                window.location.href = "login.html";
-                return;
-            }
-            
-            const userData = userDoc.data();
-            
-            // Check if admin
-            if (userData.role !== "admin") {
-                alert("Access denied. Admins only.");
-                window.location.href = "student.html";
-                return;
-            }
-            
-            // Update admin name in the UI
-            updateAdminUI(userData);
-            
-            // Initialize your existing admin dashboard
-            initializeAdminDashboard();
-            
-        } catch (error) {
-            console.error("Admin auth error:", error);
-            window.location.href = "login.html";
-        }
-    });
-}
-
-function updateAdminUI(userData) {
-    const adminName = document.getElementById('adminName');
-    const adminNameHeader = document.getElementById('adminNameHeader');
-    const adminEmail = document.getElementById('adminEmail');
-    
-    if (adminName) adminName.textContent = userData.name || 'Administrator';
-    if (adminNameHeader) adminNameHeader.textContent = userData.name || 'Administrator';
-    if (adminEmail) adminEmail.textContent = userData.email || 'admin@school.com';
-}
-
-function initializeAdminDashboard() {
-    // Your existing initialization code from admin.js
-    // Set up menu click handlers
-    document.querySelectorAll('.menu-links a').forEach(link => {
-        link.addEventListener('click', function(e) {
-            e.preventDefault();
-            const pageId = this.getAttribute('data-page');
-            if (pageId) {
-                navigateTo(pageId);
-            }
-        });
-    });
-    
-    // Initialize with dashboard
-    navigateTo('dashboard');
-    
-    // Close modal when clicking outside
-    window.addEventListener('click', function(event) {
-        const modal = document.getElementById('modal');
-        if (event.target === modal) {
-            closeModal();
-        }
-    });
-    
-    // Add logout functionality
-    document.addEventListener('click', function(e) {
-        if (e.target.closest('.logout-btn')) {
-            logoutAdmin();
-        }
-    });
-}
-
-async function logoutAdmin() {
-    try {
-        await signOut(auth);
-        window.location.href = "login.html";
-    } catch (error) {
-        console.error("Logout error:", error);
-        alert("Error logging out. Please try again.");
-    }
-}
-
-
-// admin.js - Complete Admin Dashboard Functionality
-
-// Main Application State
-const AppState = {
-    currentPage: 'dashboard',
+// Sample initial data
+const INITIAL_DATA = {
     students: [
-        { id: 'S001', firstName: 'John', lastName: 'Smith', email: 'john.smith@email.com', course: 'CS101', status: 'active', enrollmentDate: '2023-01-15', phone: '(123) 456-7890', address: '123 Main St, City' },
-        { id: 'S002', firstName: 'Emma', lastName: 'Johnson', email: 'emma.j@email.com', course: 'BA201', status: 'active', enrollmentDate: '2023-02-10', phone: '(234) 567-8901', address: '456 Oak Ave, Town' },
-        { id: 'S003', firstName: 'Michael', lastName: 'Brown', email: 'm.brown@email.com', course: 'EE301', status: 'inactive', enrollmentDate: '2022-11-05', phone: '(345) 678-9012', address: '789 Pine Rd, Village' },
-        { id: 'S004', firstName: 'Sarah', lastName: 'Williams', email: 'sarah.w@email.com', course: 'PSY101', status: 'active', enrollmentDate: '2023-03-22', phone: '(456) 789-0123', address: '321 Elm St, County' }
+        { id: 'ST001', name: 'John Smith', email: 'john.smith@email.com', phone: '555-0101', course: 'CS101', status: 'active', enrollmentDate: '2024-01-15', gpa: 3.8 },
+        { id: 'ST002', name: 'Emma Johnson', email: 'emma.j@email.com', phone: '555-0102', course: 'BUS202', status: 'active', enrollmentDate: '2024-01-20', gpa: 3.9 },
+        { id: 'ST003', name: 'Michael Brown', email: 'm.brown@email.com', phone: '555-0103', course: 'ENG150', status: 'inactive', enrollmentDate: '2023-09-10', gpa: 3.2 },
+        { id: 'ST004', name: 'Sarah Wilson', email: 'sarah.w@email.com', phone: '555-0104', course: 'CS101', status: 'active', enrollmentDate: '2024-02-01', gpa: 3.5 },
+        { id: 'ST005', name: 'David Miller', email: 'd.miller@email.com', phone: '555-0105', course: 'BUS202', status: 'active', enrollmentDate: '2024-01-25', gpa: 3.7 }
     ],
     courses: [
-        { code: 'CS101', name: 'Introduction to Programming', instructor: 'Dr. Alan Turing', department: 'Computer Science', students: 45, credits: 3, description: 'Fundamental programming concepts' },
-        { code: 'BA201', name: 'Business Management', instructor: 'Prof. Jane Doe', department: 'Business', students: 38, credits: 4, description: 'Principles of business management' },
-        { code: 'EE301', name: 'Circuit Analysis', instructor: 'Dr. Robert Johnson', department: 'Engineering', students: 32, credits: 4, description: 'Analysis of electrical circuits' },
-        { code: 'PSY101', name: 'Introduction to Psychology', instructor: 'Dr. Sarah Miller', department: 'Psychology', students: 42, credits: 3, description: 'Basic psychological principles' }
+        { code: 'CS101', name: 'Introduction to Programming', instructor: 'Dr. Sarah Miller', credits: 3, students: 45, capacity: 50, description: 'Basic programming concepts using Python', status: 'active' },
+        { code: 'BUS202', name: 'Business Management', instructor: 'Prof. James Wilson', credits: 4, students: 32, capacity: 40, description: 'Fundamentals of business administration', status: 'active' },
+        { code: 'ENG150', name: 'Engineering Mathematics', instructor: 'Dr. Robert Chen', credits: 4, students: 38, capacity: 45, description: 'Mathematics for engineering students', status: 'active' },
+        { code: 'ART110', name: 'Art History', instructor: 'Prof. Maria Garcia', credits: 3, students: 28, capacity: 35, description: 'Survey of art history from ancient to modern', status: 'active' }
     ],
     grades: [
-        { id: 'G001', studentId: 'S001', studentName: 'John Smith', course: 'CS101', midterm: 85, final: 90, assignments: 88, overall: 'A-' },
-        { id: 'G002', studentId: 'S002', studentName: 'Emma Johnson', course: 'BA201', midterm: 92, final: 88, assignments: 95, overall: 'A' },
-        { id: 'G003', studentId: 'S003', studentName: 'Michael Brown', course: 'EE301', midterm: 78, final: 82, assignments: 80, overall: 'B-' },
-        { id: 'G004', studentId: 'S004', studentName: 'Sarah Williams', course: 'PSY101', midterm: 88, final: 91, assignments: 89, overall: 'A-' }
+        { studentId: 'ST001', courseCode: 'CS101', midterm: 85, final: 90, assignments: 88, total: 87.5, grade: 'A-' },
+        { studentId: 'ST002', courseCode: 'BUS202', midterm: 92, final: 88, assignments: 90, total: 90.0, grade: 'A' },
+        { studentId: 'ST003', courseCode: 'ENG150', midterm: 78, final: 82, assignments: 80, total: 80.0, grade: 'B' },
+        { studentId: 'ST004', courseCode: 'CS101', midterm: 88, final: 85, assignments: 86, total: 86.5, grade: 'B+' },
+        { studentId: 'ST001', courseCode: 'ENG150', midterm: 90, final: 92, assignments: 91, total: 91.0, grade: 'A' }
     ],
     attendance: [
-        { id: 'A001', date: '2023-04-20', course: 'CS101', totalStudents: 45, present: 42, absent: 3, percentage: '93.3%', notes: 'Regular class' },
-        { id: 'A002', date: '2023-04-19', course: 'BA201', totalStudents: 38, present: 35, absent: 3, percentage: '92.1%', notes: 'Guest lecture' },
-        { id: 'A003', date: '2023-04-18', course: 'EE301', totalStudents: 32, present: 30, absent: 2, percentage: '93.8%', notes: 'Lab session' },
-        { id: 'A004', date: '2023-04-17', course: 'PSY101', totalStudents: 42, present: 40, absent: 2, percentage: '95.2%', notes: 'Group discussion' }
+        { studentId: 'ST001', date: '2024-04-01', status: 'present' },
+        { studentId: 'ST002', date: '2024-04-01', status: 'present' },
+        { studentId: 'ST003', date: '2024-04-01', status: 'absent' },
+        { studentId: 'ST004', date: '2024-04-01', status: 'present' },
+        { studentId: 'ST005', date: '2024-04-01', status: 'late' }
     ],
     announcements: [
-        { id: 'AN001', title: 'Midterm Exams Schedule', content: 'The midterm exam schedule has been published. Please check the course pages for specific dates and times.', date: '2023-04-15' },
-        { id: 'AN002', title: 'New Library Hours', content: 'Starting next week, the library will extend its hours to 10 PM on weekdays.', date: '2023-04-12' },
-        { id: 'AN003', title: 'Registration for Fall 2023', content: 'Registration for the Fall 2023 semester will open on May 1st. Please ensure all prerequisites are met.', date: '2023-04-10' },
-        { id: 'AN004', title: 'Campus Maintenance', content: 'There will be scheduled maintenance in the science building this weekend. Please avoid the area.', date: '2023-04-08' }
-    ],
-    reports: [
-        { id: 'R001', name: 'Monthly Student Report', type: 'PDF', generated: '2023-04-01', size: '2.4 MB' },
-        { id: 'R002', name: 'Attendance Summary', type: 'Excel', generated: '2023-04-05', size: '1.8 MB' },
-        { id: 'R003', name: 'Grade Distribution', type: 'PDF', generated: '2023-04-10', size: '3.1 MB' },
-        { id: 'R004', name: 'Course Enrollment', type: 'CSV', generated: '2023-04-15', size: '1.2 MB' }
+        { id: 1, title: 'Midterm Exams Schedule', content: 'Midterm exams will begin next Monday. Please check the schedule on the notice board.', type: 'academic', priority: 'high', date: '2024-03-25', author: 'Admin' },
+        { id: 2, title: 'Campus Maintenance', content: 'The library will be closed this Saturday for maintenance work.', type: 'general', priority: 'normal', date: '2024-03-20', author: 'Admin' },
+        { id: 3, title: 'Scholarship Applications', content: 'Applications for the Spring semester scholarships are now open.', type: 'academic', priority: 'high', date: '2024-03-15', author: 'Admin' }
     ]
 };
 
-// Page Templates
-const PageTemplates = {
-    dashboard: () => `
+// Initialize storage
+function initializeStorage() {
+    Object.keys(STORAGE_KEYS).forEach(key => {
+        const storageKey = STORAGE_KEYS[key];
+        if (!localStorage.getItem(storageKey)) {
+            const dataKey = key.toLowerCase().slice(0, -1); // Remove 's' from key
+            localStorage.setItem(storageKey, JSON.stringify(INITIAL_DATA[dataKey] || []));
+        }
+    });
+}
+
+// Data CRUD operations
+function getData(key) {
+    const data = localStorage.getItem(STORAGE_KEYS[key]);
+    return data ? JSON.parse(data) : [];
+}
+
+function saveData(key, data) {
+    localStorage.setItem(STORAGE_KEYS[key], JSON.stringify(data));
+}
+
+function addStudent(student) {
+    const students = getData('STUDENTS');
+    students.push(student);
+    saveData('STUDENTS', students);
+    return student;
+}
+
+function addCourse(course) {
+    const courses = getData('COURSES');
+    courses.push(course);
+    saveData('COURSES', courses);
+    return course;
+}
+
+function addAnnouncement(announcement) {
+    const announcements = getData('ANNOUNCEMENTS');
+    announcement.id = announcements.length + 1;
+    announcement.date = new Date().toISOString().split('T')[0];
+    announcement.author = 'Administrator';
+    announcements.unshift(announcement); // Add to beginning
+    saveData('ANNOUNCEMENTS', announcements);
+    return announcement;
+}
+
+function updateGrade(studentId, courseCode, gradeData) {
+    const grades = getData('GRADES');
+    const index = grades.findIndex(g => g.studentId === studentId && g.courseCode === courseCode);
+    
+    if (index !== -1) {
+        grades[index] = { ...grades[index], ...gradeData };
+    } else {
+        grades.push({ studentId, courseCode, ...gradeData });
+    }
+    
+    saveData('GRADES', grades);
+}
+
+// Analytics functions
+function calculateStats() {
+    const students = getData('STUDENTS');
+    const courses = getData('COURSES');
+    const grades = getData('GRADES');
+    const attendance = getData('ATTENDANCE');
+    
+    const activeStudents = students.filter(s => s.status === 'active').length;
+    const totalCourses = courses.length;
+    const activeCourses = courses.filter(c => c.status === 'active').length;
+    
+    // Calculate average GPA
+    const studentGPAs = students.map(s => s.gpa || 0).filter(gpa => gpa > 0);
+    const averageGPA = studentGPAs.length > 0 
+        ? (studentGPAs.reduce((a, b) => a + b, 0) / studentGPAs.length).toFixed(2)
+        : '0.00';
+    
+    // Calculate attendance rate
+    const today = new Date().toISOString().split('T')[0];
+    const todayAttendance = attendance.filter(a => a.date === today);
+    const presentCount = todayAttendance.filter(a => a.status === 'present').length;
+    const attendanceRate = todayAttendance.length > 0 
+        ? ((presentCount / todayAttendance.length) * 100).toFixed(1)
+        : '0.0';
+    
+    return {
+        totalStudents: students.length,
+        activeStudents,
+        totalCourses,
+        activeCourses,
+        averageGPA,
+        attendanceRate: attendanceRate + '%',
+        newStudentsThisMonth: Math.floor(students.length * 0.12), // 12% growth
+        graduatingThisYear: Math.floor(students.length * 0.27) // 27% graduating
+    };
+}
+
+// ====== CHART FUNCTIONS ======
+let charts = {}; // Store chart instances
+
+function destroyChart(chartId) {
+    if (charts[chartId]) {
+        charts[chartId].destroy();
+        delete charts[chartId];
+    }
+}
+
+function renderStudentDistributionChart() {
+    const students = getData('STUDENTS');
+    const courses = getData('COURSES');
+    
+    const courseCounts = {};
+    courses.forEach(course => {
+        const count = students.filter(s => s.course === course.code).length;
+        courseCounts[course.name] = count;
+    });
+    
+    const ctx = document.getElementById('studentDistributionChart');
+    if (!ctx) return;
+    
+    destroyChart('studentDistributionChart');
+    
+    charts['studentDistributionChart'] = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: Object.keys(courseCounts),
+            datasets: [{
+                data: Object.values(courseCounts),
+                backgroundColor: [
+                    '#3498db',
+                    '#2ecc71',
+                    '#e74c3c',
+                    '#f39c12',
+                    '#9b59b6',
+                    '#1abc9c'
+                ],
+                borderWidth: 2
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'right',
+                },
+                title: {
+                    display: true,
+                    text: 'Students by Course'
+                }
+            }
+        }
+    });
+}
+
+function renderGradeDistributionChart() {
+    const grades = getData('GRADES');
+    
+    const gradeCounts = {
+        'A': 0, 'A-': 0, 'B+': 0, 'B': 0, 'B-': 0,
+        'C+': 0, 'C': 0, 'C-': 0, 'D': 0, 'F': 0
+    };
+    
+    grades.forEach(grade => {
+        if (gradeCounts.hasOwnProperty(grade.grade)) {
+            gradeCounts[grade.grade]++;
+        }
+    });
+    
+    const ctx = document.getElementById('gradeDistributionChart');
+    if (!ctx) return;
+    
+    destroyChart('gradeDistributionChart');
+    
+    charts['gradeDistributionChart'] = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: Object.keys(gradeCounts).filter(k => gradeCounts[k] > 0),
+            datasets: [{
+                label: 'Number of Grades',
+                data: Object.values(gradeCounts).filter(v => v > 0),
+                backgroundColor: '#3498db',
+                borderColor: '#2980b9',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Number of Grades'
+                    }
+                },
+                x: {
+                    title: {
+                        display: true,
+                        text: 'Grade'
+                    }
+                }
+            },
+            plugins: {
+                title: {
+                    display: true,
+                    text: 'Grade Distribution'
+                }
+            }
+        }
+    });
+}
+
+function renderAttendanceTrendChart() {
+    const attendance = getData('ATTENDANCE');
+    
+    // Group by date
+    const dateGroups = {};
+    attendance.forEach(record => {
+        if (!dateGroups[record.date]) {
+            dateGroups[record.date] = { present: 0, total: 0 };
+        }
+        dateGroups[record.date].total++;
+        if (record.status === 'present') {
+            dateGroups[record.date].present++;
+        }
+    });
+    
+    const dates = Object.keys(dateGroups).sort();
+    const rates = dates.map(date => {
+        const group = dateGroups[date];
+        return (group.present / group.total) * 100;
+    });
+    
+    const ctx = document.getElementById('attendanceTrendChart');
+    if (!ctx) return;
+    
+    destroyChart('attendanceTrendChart');
+    
+    charts['attendanceTrendChart'] = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: dates,
+            datasets: [{
+                label: 'Attendance Rate (%)',
+                data: rates,
+                borderColor: '#2ecc71',
+                backgroundColor: 'rgba(46, 204, 113, 0.1)',
+                fill: true,
+                tension: 0.4
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    max: 100,
+                    title: {
+                        display: true,
+                        text: 'Attendance Rate (%)'
+                    }
+                },
+                x: {
+                    title: {
+                        display: true,
+                        text: 'Date'
+                    }
+                }
+            },
+            plugins: {
+                title: {
+                    display: true,
+                    text: 'Attendance Trends'
+                }
+            }
+        }
+    });
+}
+
+function renderCourseEnrollmentChart() {
+    const courses = getData('COURSES');
+    
+    const ctx = document.getElementById('courseEnrollmentChart');
+    if (!ctx) return;
+    
+    destroyChart('courseEnrollmentChart');
+    
+    charts['courseEnrollmentChart'] = new Chart(ctx, {
+        type: 'horizontalBar',
+        data: {
+            labels: courses.map(c => c.name),
+            datasets: [{
+                label: 'Enrollment',
+                data: courses.map(c => c.students),
+                backgroundColor: courses.map((_, i) => 
+                    ['#3498db', '#2ecc71', '#e74c3c', '#f39c12', '#9b59b6'][i % 5]
+                ),
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            indexAxis: 'y',
+            scales: {
+                x: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Number of Students'
+                    }
+                }
+            },
+            plugins: {
+                title: {
+                    display: true,
+                    text: 'Course Enrollment'
+                },
+                legend: {
+                    display: false
+                }
+            }
+        }
+    });
+}
+
+// ====== INITIALIZE THE DASHBOARD ======
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('Dashboard loading...');
+    
+    // Initialize data storage
+    initializeStorage();
+    
+    // Load the dashboard when page loads
+    loadPage('dashboard');
+    
+    // Add click event listeners to all menu items
+    const menuItems = document.querySelectorAll('.menu-links a');
+    menuItems.forEach(item => {
+        item.addEventListener('click', function(e) {
+            e.preventDefault();
+            const page = this.getAttribute('data-page');
+            console.log('Loading page:', page);
+            loadPage(page);
+            
+            // Update active menu item
+            menuItems.forEach(i => i.classList.remove('active'));
+            this.classList.add('active');
+        });
+    });
+});
+
+// ====== PAGE LOADING FUNCTION ======
+function loadPage(page) {
+    const pageContent = document.getElementById('pageContent');
+    const pageTitle = document.getElementById('pageTitle');
+    
+    if (!pageContent) {
+        console.error('pageContent element not found!');
+        return;
+    }
+    
+    // Show loading indicator
+    pageContent.innerHTML = `
+        <div style="text-align: center; padding: 50px;">
+            <div class="loading-spinner" style="width: 40px; height: 40px; border: 4px solid #f3f3f3; border-top: 4px solid #3498db; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 20px;"></div>
+            <p>Loading ${page.replace('-', ' ')}...</p>
+        </div>
+    `;
+    
+    // Update page title
+    if (pageTitle) {
+        const titles = {
+            'dashboard': 'Admin Dashboard',
+            'students': 'Manage Students',
+            'courses': 'Manage Courses',
+            'grades': 'Manage Grades',
+            'attendance': 'Attendance Management',
+            'announcements': 'Announcements',
+            'reports': 'Generate Reports',
+            'analytics': 'Analytics Dashboard',
+            'settings': 'System Settings'
+        };
+        pageTitle.textContent = titles[page] || 'Admin Dashboard';
+    }
+    
+    // Load content after a short delay
+    setTimeout(() => {
+        switch(page) {
+            case 'dashboard':
+                loadDashboard();
+                break;
+            case 'students':
+                loadStudentsPage();
+                break;
+            case 'courses':
+                loadCoursesPage();
+                break;
+            case 'grades':
+                loadGradesPage();
+                break;
+            case 'attendance':
+                loadAttendancePage();
+                break;
+            case 'announcements':
+                loadAnnouncementsPage();
+                break;
+            case 'reports':
+                loadReportsPage();
+                break;
+            case 'analytics':
+                loadAnalyticsPage();
+                break;
+            case 'settings':
+                loadSettingsPage();
+                break;
+            default:
+                loadDashboard();
+        }
+    }, 300);
+}
+
+// ====== DASHBOARD CONTENT ======
+function loadDashboard() {
+    const stats = calculateStats();
+    
+    const pageContent = document.getElementById('pageContent');
+    
+    pageContent.innerHTML = `
         <div class="stats-cards">
-            <div class="stat-card" onclick="navigateTo('students')">
+            <div class="stat-card" onclick="loadPage('students')">
                 <h3>Total Students</h3>
-                <div class="value">${AppState.students.length}</div>
-                <div class="change positive"><i class="fas fa-arrow-up"></i> 5.2% from last month</div>
+                <div class="value">${stats.totalStudents}</div>
+                <div class="change positive"><i class="fas fa-arrow-up"></i> ${stats.newStudentsThisMonth} new this month</div>
             </div>
-            <div class="stat-card" onclick="navigateTo('students')">
-                <h3>Active Students</h3>
-                <div class="value">${AppState.students.filter(s => s.status === 'active').length}</div>
-                <div class="change positive"><i class="fas fa-arrow-up"></i> 4.1% from last month</div>
+            <div class="stat-card" onclick="loadPage('courses')">
+                <h3>Active Courses</h3>
+                <div class="value">${stats.activeCourses}</div>
+                <div class="change positive"><i class="fas fa-arrow-up"></i> ${stats.activeCourses}/${stats.totalCourses} active</div>
             </div>
-            <div class="stat-card" onclick="navigateTo('courses')">
-                <h3>Courses Offered</h3>
-                <div class="value">${AppState.courses.length}</div>
-                <div class="change positive"><i class="fas fa-arrow-up"></i> 2 new this term</div>
+            <div class="stat-card" onclick="loadPage('attendance')">
+                <h3>Today's Attendance</h3>
+                <div class="value">${stats.attendanceRate}</div>
+                <div class="change ${parseFloat(stats.attendanceRate) > 95 ? 'positive' : 'negative'}">
+                    <i class="fas fa-arrow-${parseFloat(stats.attendanceRate) > 95 ? 'up' : 'down'}"></i> 
+                    ${parseFloat(stats.attendanceRate) > 95 ? 'Excellent' : 'Needs improvement'}
+                </div>
             </div>
-            <div class="stat-card" onclick="navigateTo('grades')">
+            <div class="stat-card" onclick="loadPage('grades')">
                 <h3>Average GPA</h3>
-                <div class="value">3.42</div>
-                <div class="change positive"><i class="fas fa-arrow-up"></i> 0.08 from last term</div>
-            </div>
-            <div class="stat-card" onclick="navigateTo('attendance')">
-                <h3>Attendance Rate</h3>
-                <div class="value">94.7%</div>
-                <div class="change negative"><i class="fas fa-arrow-down"></i> 1.3% from last week</div>
+                <div class="value">${stats.averageGPA}</div>
+                <div class="change positive"><i class="fas fa-arrow-up"></i> Good academic performance</div>
             </div>
         </div>
 
@@ -192,435 +504,991 @@ const PageTemplates = {
                 <h3><i class="fas fa-bolt"></i> Quick Actions</h3>
                 <ul class="card-links">
                     <li>
-                        <a onclick="showAddStudentForm()">
-                            <i class="fas fa-user-plus"></i> Add New Student
+                        <a onclick="generateReport('student')">
+                            <i class="fas fa-file-export"></i> Generate Student Report
                         </a>
-                        <span class="badge">New</span>
+                        <span class="badge">NEW</span>
                     </li>
                     <li>
-                        <a onclick="showAddCourseForm()">
-                            <i class="fas fa-plus-circle"></i> Create Course
-                        </a>
-                    </li>
-                    <li>
-                        <a onclick="generateReport()">
-                            <i class="fas fa-file-export"></i> Export Report
+                        <a onclick="sendBulkEmail()">
+                            <i class="fas fa-envelope"></i> Send Bulk Email
                         </a>
                     </li>
                     <li>
-                        <a onclick="showAddAnnouncementForm()">
-                            <i class="fas fa-bullhorn"></i> Send Announcement
+                        <a onclick="uploadGrades()">
+                            <i class="fas fa-upload"></i> Upload Grades
+                        </a>
+                    </li>
+                    <li>
+                        <a onclick="markAttendance()">
+                            <i class="fas fa-check-circle"></i> Mark Today's Attendance
+                        </a>
+                    </li>
+                    <li>
+                        <a onclick="loadPage('analytics')">
+                            <i class="fas fa-chart-bar"></i> View Analytics
                         </a>
                     </li>
                 </ul>
             </div>
 
             <div class="dashboard-card">
-                <h3><i class="fas fa-history"></i> Recent Activity</h3>
+                <h3><i class="fas fa-bullhorn"></i> Recent Announcements</h3>
                 <ul class="card-links">
                     <li>
-                        <a onclick="navigateTo('grades')">
-                            <i class="fas fa-edit"></i> Grades updated for Math 101
+                        <a onclick="openAnnouncementModal()">
+                            <i class="fas fa-plus-circle"></i> Create New Announcement
                         </a>
-                        <span class="badge">Today</span>
                     </li>
                     <li>
-                        <a onclick="navigateTo('students')">
-                            <i class="fas fa-user-check"></i> 5 new student registrations
+                        <a onclick="scheduleAnnouncement()">
+                            <i class="fas fa-clock"></i> Schedule Announcement
                         </a>
-                        <span class="badge">Yesterday</span>
                     </li>
                     <li>
-                        <a onclick="navigateTo('attendance')">
-                            <i class="fas fa-exclamation-triangle"></i> Low attendance alert
+                        <a onclick="sendEmailBlast()">
+                            <i class="fas fa-paper-plane"></i> Send Email Blast
                         </a>
-                        <span class="badge">2 days ago</span>
+                    </li>
+                </ul>
+                ${renderRecentAnnouncements()}
+            </div>
+
+            <div class="dashboard-card">
+                <h3><i class="fas fa-chart-line"></i> Reports & Analytics</h3>
+                <ul class="card-links">
+                    <li>
+                        <a onclick="generateStudentReport()">
+                            <i class="fas fa-user-graduate"></i> Student Performance
+                        </a>
                     </li>
                     <li>
-                        <a onclick="navigateTo('reports')">
-                            <i class="fas fa-file-pdf"></i> Monthly report generated
+                        <a onclick="generateCourseReport()">
+                            <i class="fas fa-book"></i> Course Analytics
                         </a>
-                        <span class="badge">3 days ago</span>
+                    </li>
+                    <li>
+                        <a onclick="generateAttendanceReport()">
+                            <i class="fas fa-calendar-alt"></i> Attendance Trends
+                        </a>
+                    </li>
+                    <li>
+                        <a onclick="generateFinancialReport()">
+                            <i class="fas fa-dollar-sign"></i> Financial Report
+                        </a>
+                    </li>
+                    <li>
+                        <a onclick="exportAllData()">
+                            <i class="fas fa-download"></i> Export All Data
+                        </a>
+                    </li>
+                </ul>
+            </div>
+
+            <div class="dashboard-card">
+                <h3><i class="fas fa-cog"></i> System Tasks</h3>
+                <ul class="card-links">
+                    <li>
+                        <a onclick="assignInstructors()">
+                            <i class="fas fa-chalkboard-teacher"></i> Assign Instructors
+                        </a>
+                    </li>
+                    <li>
+                        <a onclick="calculateGPA()">
+                            <i class="fas fa-calculator"></i> Calculate GPAs
+                        </a>
+                    </li>
+                    <li>
+                        <a onclick="sendAbsenceAlerts()">
+                            <i class="fas fa-bell"></i> Send Absence Alerts
+                        </a>
+                    </li>
+                    <li>
+                        <a onclick="backupData()">
+                            <i class="fas fa-database"></i> Backup Data
+                        </a>
+                    </li>
+                    <li>
+                        <a onclick="loadPage('settings')">
+                            <i class="fas fa-sliders-h"></i> System Settings
+                        </a>
                     </li>
                 </ul>
             </div>
         </div>
-
-        <div class="announcement-section">
-            <h3><i class="fas fa-bullhorn"></i> Recent Announcements</h3>
-            ${AppState.announcements.slice(0, 3).map(announcement => `
-                <div class="announcement-item">
-                    <h4>${announcement.title}</h4>
-                    <p>${announcement.content}</p>
-                    <div class="date">Posted: ${announcement.date}</div>
-                </div>
-            `).join('')}
+        
+        <!-- Quick Charts -->
+        <div style="margin-top: 30px; display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px;">
+            <div style="background: white; padding: 20px; border-radius: 12px; box-shadow: 0 5px 15px rgba(0,0,0,0.05);">
+                <h4 style="color: #2c3e50; margin-bottom: 15px;">Student Distribution</h4>
+                <canvas id="studentDistributionChart" height="200"></canvas>
+            </div>
+            <div style="background: white; padding: 20px; border-radius: 12px; box-shadow: 0 5px 15px rgba(0,0,0,0.05);">
+                <h4 style="color: #2c3e50; margin-bottom: 15px;">Course Enrollment</h4>
+                <canvas id="courseEnrollmentChart" height="200"></canvas>
+            </div>
         </div>
-    `,
+    `;
+    
+    // Render charts after content is loaded
+    setTimeout(() => {
+        renderStudentDistributionChart();
+        renderCourseEnrollmentChart();
+    }, 100);
+}
 
-    students: () => `
+function renderRecentAnnouncements() {
+    const announcements = getData('ANNOUNCEMENTS').slice(0, 2); // Get latest 2
+    if (announcements.length === 0) {
+        return '<div style="margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px; text-align: center; color: #7f8c8d;">No announcements yet</div>';
+    }
+    
+    return announcements.map(ann => `
+        <div style="margin-top: 15px; padding: 15px; background: #f8f9fa; border-radius: 8px; border-left: 4px solid ${ann.priority === 'high' ? '#e74c3c' : '#3498db'};">
+            <h4 style="margin: 0 0 5px 0; color: #2c3e50; font-size: 0.95rem;">${ann.title}</h4>
+            <p style="margin: 0 0 8px 0; font-size: 0.85rem; color: #666; line-height: 1.4;">${ann.content.substring(0, 80)}...</p>
+            <div style="display: flex; justify-content: space-between; font-size: 0.75rem; color: #999;">
+                <span>${ann.date}</span>
+                <span style="background: ${ann.type === 'academic' ? '#d4edda' : '#d1ecf1'}; color: ${ann.type === 'academic' ? '#155724' : '#0c5460'}; padding: 2px 8px; border-radius: 12px;">${ann.type}</span>
+            </div>
+        </div>
+    `).join('');
+}
+
+// ====== ANALYTICS PAGE ======
+function loadAnalyticsPage() {
+    const pageContent = document.getElementById('pageContent');
+    const stats = calculateStats();
+    
+    pageContent.innerHTML = `
+        <div class="page-header">
+            <h2><i class="fas fa-chart-bar"></i> Analytics Dashboard</h2>
+            <div>
+                <button class="btn" onclick="refreshAnalytics()">
+                    <i class="fas fa-sync-alt"></i> Refresh
+                </button>
+                <button class="btn btn-secondary" onclick="exportAnalytics()">
+                    <i class="fas fa-download"></i> Export
+                </button>
+            </div>
+        </div>
+        
+        <div class="stats-cards">
+            <div class="stat-card">
+                <h3>Active Students</h3>
+                <div class="value">${stats.activeStudents}</div>
+                <div class="change positive"><i class="fas fa-user-check"></i> ${stats.activeStudents}/${stats.totalStudents}</div>
+            </div>
+            <div class="stat-card">
+                <h3>Graduating Soon</h3>
+                <div class="value">${stats.graduatingThisYear}</div>
+                <div class="change positive"><i class="fas fa-graduation-cap"></i> This academic year</div>
+            </div>
+            <div class="stat-card">
+                <h3>Course Capacity</h3>
+                <div class="value">${Math.round((stats.activeStudents / (stats.activeCourses * 40)) * 100)}%</div>
+                <div class="change positive"><i class="fas fa-chart-pie"></i> Utilization rate</div>
+            </div>
+            <div class="stat-card">
+                <h3>Academic Performance</h3>
+                <div class="value">${parseFloat(stats.averageGPA) > 3.5 ? 'Excellent' : 'Good'}</div>
+                <div class="change ${parseFloat(stats.averageGPA) > 3.5 ? 'positive' : 'negative'}">
+                    <i class="fas fa-${parseFloat(stats.averageGPA) > 3.5 ? 'star' : 'chart-line'}"></i> 
+                    GPA: ${stats.averageGPA}
+                </div>
+            </div>
+        </div>
+        
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 25px; margin-top: 30px;">
+            <div style="background: white; padding: 25px; border-radius: 12px; box-shadow: 0 5px 15px rgba(0,0,0,0.05);">
+                <h3 style="color: #2c3e50; margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
+                    <i class="fas fa-chart-pie"></i> Student Distribution
+                </h3>
+                <canvas id="studentDistributionChart" height="250"></canvas>
+            </div>
+            
+            <div style="background: white; padding: 25px; border-radius: 12px; box-shadow: 0 5px 15px rgba(0,0,0,0.05);">
+                <h3 style="color: #2c3e50; margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
+                    <i class="fas fa-chart-bar"></i> Grade Distribution
+                </h3>
+                <canvas id="gradeDistributionChart" height="250"></canvas>
+            </div>
+            
+            <div style="background: white; padding: 25px; border-radius: 12px; box-shadow: 0 5px 15px rgba(0,0,0,0.05);">
+                <h3 style="color: #2c3e50; margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
+                    <i class="fas fa-chart-line"></i> Attendance Trends
+                </h3>
+                <canvas id="attendanceTrendChart" height="250"></canvas>
+            </div>
+            
+            <div style="background: white; padding: 25px; border-radius: 12px; box-shadow: 0 5px 15px rgba(0,0,0,0.05);">
+                <h3 style="color: #2c3e50; margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
+                    <i class="fas fa-users"></i> Course Enrollment
+                </h3>
+                <canvas id="courseEnrollmentChart" height="250"></canvas>
+            </div>
+        </div>
+        
+        <div style="margin-top: 40px; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 5px 15px rgba(0,0,0,0.05);">
+            <h3 style="color: #2c3e50; margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
+                <i class="fas fa-table"></i> Analytics Summary
+            </h3>
+            <div class="data-table">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Metric</th>
+                            <th>Value</th>
+                            <th>Trend</th>
+                            <th>Target</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Student Enrollment</td>
+                            <td>${stats.totalStudents}</td>
+                            <td><span class="positive"><i class="fas fa-arrow-up"></i> Growing</span></td>
+                            <td>1,500</td>
+                            <td><span class="status-active">On Track</span></td>
+                        </tr>
+                        <tr>
+                            <td>Average GPA</td>
+                            <td>${stats.averageGPA}</td>
+                            <td><span class="positive"><i class="fas fa-arrow-up"></i> Improving</span></td>
+                            <td>3.5</td>
+                            <td><span class="status-active">${parseFloat(stats.averageGPA) >= 3.5 ? 'Met' : 'Below'}</span></td>
+                        </tr>
+                        <tr>
+                            <td>Attendance Rate</td>
+                            <td>${stats.attendanceRate}</td>
+                            <td><span class="${parseFloat(stats.attendanceRate) > 95 ? 'positive' : 'negative'}">
+                                <i class="fas fa-arrow-${parseFloat(stats.attendanceRate) > 95 ? 'up' : 'down'}"></i> 
+                                ${parseFloat(stats.attendanceRate) > 95 ? 'Good' : 'Needs Work'}
+                            </span></td>
+                            <td>95%</td>
+                            <td><span class="status-${parseFloat(stats.attendanceRate) >= 95 ? 'active' : 'inactive'}">${parseFloat(stats.attendanceRate) >= 95 ? 'Met' : 'Below'}</span></td>
+                        </tr>
+                        <tr>
+                            <td>Course Completion</td>
+                            <td>92%</td>
+                            <td><span class="positive"><i class="fas fa-arrow-up"></i> Stable</span></td>
+                            <td>90%</td>
+                            <td><span class="status-active">Exceeded</span></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    `;
+    
+    // Render all charts
+    setTimeout(() => {
+        renderStudentDistributionChart();
+        renderGradeDistributionChart();
+        renderAttendanceTrendChart();
+        renderCourseEnrollmentChart();
+    }, 100);
+}
+
+// ====== OTHER PAGE FUNCTIONS (Updated with real data) ======
+function loadStudentsPage() {
+    const students = getData('STUDENTS');
+    
+    const pageContent = document.getElementById('pageContent');
+    pageContent.innerHTML = `
         <div class="page-header">
             <h2><i class="fas fa-users"></i> Manage Students</h2>
-            <button class="btn" onclick="showAddStudentForm()">
-                <i class="fas fa-user-plus"></i> Add New Student
-            </button>
+            <div>
+                <button class="btn btn-secondary" onclick="exportStudents()">
+                    <i class="fas fa-download"></i> Export
+                </button>
+                <button class="btn" onclick="openAddStudentModal()" style="margin-left: 10px;">
+                    <i class="fas fa-plus"></i> Add New Student
+                </button>
+            </div>
         </div>
-
+        
         <div class="data-table">
             <table>
                 <thead>
                     <tr>
-                        <th>Student ID</th>
+                        <th>ID</th>
                         <th>Name</th>
                         <th>Email</th>
+                        <th>Phone</th>
                         <th>Course</th>
+                        <th>GPA</th>
                         <th>Status</th>
-                        <th>Enrollment Date</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody>
-                    ${AppState.students.map(student => {
-                        const course = AppState.courses.find(c => c.code === student.course);
-                        const courseName = course ? course.name : student.course;
-                        return `
-                            <tr>
-                                <td>${student.id}</td>
-                                <td>${student.firstName} ${student.lastName}</td>
-                                <td>${student.email}</td>
-                                <td>${courseName}</td>
-                                <td><span class="status-${student.status}">${student.status.charAt(0).toUpperCase() + student.status.slice(1)}</span></td>
-                                <td>${student.enrollmentDate}</td>
-                                <td>
-                                    <div class="action-btns">
-                                        <button class="action-btn edit-btn" onclick="editStudent('${student.id}')">
-                                            <i class="fas fa-edit"></i> Edit
-                                        </button>
-                                        <button class="action-btn view-btn" onclick="viewStudentDetails('${student.id}')">
-                                            <i class="fas fa-eye"></i> View
-                                        </button>
-                                        <button class="action-btn delete-btn" onclick="deleteStudent('${student.id}')">
-                                            <i class="fas fa-trash"></i> Delete
-                                        </button>
-                                    </div>
-                                </td>
-                            </tr>
-                        `;
-                    }).join('')}
-                </tbody>
-            </table>
-        </div>
-    `,
-
-    courses: () => `
-        <div class="page-header">
-            <h2><i class="fas fa-book-open"></i> Manage Courses</h2>
-            <button class="btn" onclick="showAddCourseForm()">
-                <i class="fas fa-plus-circle"></i> Add New Course
-            </button>
-        </div>
-
-        <div class="data-table">
-            <table>
-                <thead>
-                    <tr>
-                        <th>Course Code</th>
-                        <th>Course Name</th>
-                        <th>Instructor</th>
-                        <th>Department</th>
-                        <th>Students Enrolled</th>
-                        <th>Credits</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${AppState.courses.map(course => `
+                    ${students.map(student => `
                         <tr>
-                            <td>${course.code}</td>
-                            <td>${course.name}</td>
-                            <td>${course.instructor}</td>
-                            <td>${course.department}</td>
-                            <td>${course.students}</td>
-                            <td>${course.credits}</td>
-                            <td>
-                                <div class="action-btns">
-                                    <button class="action-btn edit-btn" onclick="editCourse('${course.code}')">
-                                        <i class="fas fa-edit"></i> Edit
-                                    </button>
-                                    <button class="action-btn view-btn" onclick="viewCourseDetails('${course.code}')">
-                                        <i class="fas fa-eye"></i> View
-                                    </button>
-                                    <button class="action-btn delete-btn" onclick="deleteCourse('${course.code}')">
-                                        <i class="fas fa-trash"></i> Delete
-                                    </button>
-                                </div>
+                            <td>${student.id}</td>
+                            <td>${student.name}</td>
+                            <td>${student.email}</td>
+                            <td>${student.phone || 'N/A'}</td>
+                            <td>${student.course}</td>
+                            <td><strong>${student.gpa || 'N/A'}</strong></td>
+                            <td><span class="status-${student.status}">${student.status.charAt(0).toUpperCase() + student.status.slice(1)}</span></td>
+                            <td class="action-btns">
+                                <button class="action-btn view-btn" onclick="viewStudent('${student.id}')">
+                                    <i class="fas fa-eye"></i> View
+                                </button>
+                                <button class="action-btn edit-btn" onclick="editStudent('${student.id}')">
+                                    <i class="fas fa-edit"></i> Edit
+                                </button>
+                                <button class="action-btn delete-btn" onclick="deleteStudent('${student.id}')">
+                                    <i class="fas fa-trash"></i> Delete
+                                </button>
                             </td>
                         </tr>
                     `).join('')}
                 </tbody>
             </table>
         </div>
-    `,
-
-    grades: () => `
-        <div class="page-header">
-            <h2><i class="fas fa-chart-bar"></i> Manage Grades</h2>
-            <button class="btn" onclick="showAddGradeForm()">
-                <i class="fas fa-plus"></i> Add Grade
-            </button>
-            <button class="btn btn-secondary" onclick="importGrades()">
-                <i class="fas fa-upload"></i> Import Grades
+        
+        <div style="margin-top: 30px; display: flex; justify-content: space-between; align-items: center; padding: 15px; background: #f8f9fa; border-radius: 8px;">
+            <div>
+                <strong>Total Students:</strong> ${students.length} | 
+                <strong>Active:</strong> ${students.filter(s => s.status === 'active').length} | 
+                <strong>Inactive:</strong> ${students.filter(s => s.status === 'inactive').length}
+            </div>
+            <button class="btn" onclick="bulkActions()">
+                <i class="fas fa-cogs"></i> Bulk Actions
             </button>
         </div>
+    `;
+}
 
+function loadCoursesPage() {
+    const courses = getData('COURSES');
+    
+    const pageContent = document.getElementById('pageContent');
+    pageContent.innerHTML = `
+        <div class="page-header">
+            <h2><i class="fas fa-book-open"></i> Manage Courses</h2>
+            <div>
+                <button class="btn btn-secondary" onclick="exportCourses()">
+                    <i class="fas fa-download"></i> Export
+                </button>
+                <button class="btn" onclick="openAddCourseModal()" style="margin-left: 10px;">
+                    <i class="fas fa-plus"></i> Add New Course
+                </button>
+            </div>
+        </div>
+        
         <div class="data-table">
             <table>
                 <thead>
                     <tr>
-                        <th>Student Name</th>
+                        <th>Code</th>
+                        <th>Course Name</th>
+                        <th>Instructor</th>
+                        <th>Credits</th>
+                        <th>Students</th>
+                        <th>Capacity</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${courses.map(course => `
+                        <tr>
+                            <td>${course.code}</td>
+                            <td>${course.name}</td>
+                            <td>${course.instructor}</td>
+                            <td>${course.credits}</td>
+                            <td>${course.students} / ${course.capacity}</td>
+                            <td>
+                                <div style="background: #e9ecef; height: 8px; border-radius: 4px; overflow: hidden;">
+                                    <div style="width: ${(course.students / course.capacity) * 100}%; background: ${(course.students / course.capacity) > 0.9 ? '#e74c3c' : '#2ecc71'}; height: 100%;"></div>
+                                </div>
+                                <small>${Math.round((course.students / course.capacity) * 100)}% full</small>
+                            </td>
+                            <td><span class="status-${course.status}">${course.status.charAt(0).toUpperCase() + course.status.slice(1)}</span></td>
+                            <td class="action-btns">
+                                <button class="action-btn view-btn" onclick="viewCourse('${course.code}')">
+                                    <i class="fas fa-eye"></i> View
+                                </button>
+                                <button class="action-btn edit-btn" onclick="editCourse('${course.code}')">
+                                    <i class="fas fa-edit"></i> Edit
+                                </button>
+                                <button class="action-btn delete-btn" onclick="deleteCourse('${course.code}')">
+                                    <i class="fas fa-trash"></i> Delete
+                                </button>
+                            </td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+        </div>
+    `;
+}
+
+function loadGradesPage() {
+    const grades = getData('GRADES');
+    const students = getData('STUDENTS');
+    const courses = getData('COURSES');
+    
+    // Enrich grades with student and course names
+    const enrichedGrades = grades.map(grade => {
+        const student = students.find(s => s.id === grade.studentId);
+        const course = courses.find(c => c.code === grade.courseCode);
+        return {
+            ...grade,
+            studentName: student ? student.name : 'Unknown',
+            courseName: course ? course.name : 'Unknown'
+        };
+    });
+    
+    const pageContent = document.getElementById('pageContent');
+    pageContent.innerHTML = `
+        <div class="page-header">
+            <h2><i class="fas fa-chart-bar"></i> Manage Grades</h2>
+            <div>
+                <button class="btn btn-secondary" onclick="exportGrades()">
+                    <i class="fas fa-download"></i> Export
+                </button>
+                <button class="btn" onclick="openGradeUploadModal()" style="margin-left: 10px;">
+                    <i class="fas fa-upload"></i> Upload Grades
+                </button>
+                <button class="btn" onclick="openAddGradeModal()" style="margin-left: 10px;">
+                    <i class="fas fa-plus"></i> Add Grade
+                </button>
+            </div>
+        </div>
+        
+        <div class="data-table">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Student</th>
                         <th>Course</th>
                         <th>Midterm</th>
                         <th>Final</th>
                         <th>Assignments</th>
-                        <th>Overall Grade</th>
+                        <th>Total</th>
+                        <th>Grade</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody>
-                    ${AppState.grades.map(grade => {
-                        const course = AppState.courses.find(c => c.code === grade.course);
-                        const courseName = course ? course.name : grade.course;
-                        return `
-                            <tr>
-                                <td>${grade.studentName}</td>
-                                <td>${courseName}</td>
-                                <td>${grade.midterm}</td>
-                                <td>${grade.final}</td>
-                                <td>${grade.assignments}</td>
-                                <td><strong>${grade.overall}</strong></td>
-                                <td>
-                                    <div class="action-btns">
-                                        <button class="action-btn edit-btn" onclick="editGrade('${grade.id}')">
-                                            <i class="fas fa-edit"></i> Edit
-                                        </button>
-                                        <button class="action-btn delete-btn" onclick="deleteGrade('${grade.id}')">
-                                            <i class="fas fa-trash"></i> Delete
-                                        </button>
-                                    </div>
-                                </td>
-                            </tr>
-                        `;
-                    }).join('')}
+                    ${enrichedGrades.map(grade => `
+                        <tr>
+                            <td>${grade.studentName} (${grade.studentId})</td>
+                            <td>${grade.courseName}</td>
+                            <td>${grade.midterm}</td>
+                            <td>${grade.final}</td>
+                            <td>${grade.assignments}</td>
+                            <td><strong>${grade.total}</strong></td>
+                            <td><span style="font-weight: bold; color: ${grade.grade === 'A' ? '#27ae60' : grade.grade === 'B' ? '#f39c12' : '#e74c3c'}">${grade.grade}</span></td>
+                            <td class="action-btns">
+                                <button class="action-btn edit-btn" onclick="editGrade('${grade.studentId}', '${grade.courseCode}')">
+                                    <i class="fas fa-edit"></i> Edit
+                                </button>
+                                <button class="action-btn delete-btn" onclick="deleteGrade('${grade.studentId}', '${grade.courseCode}')">
+                                    <i class="fas fa-trash"></i> Delete
+                                </button>
+                            </td>
+                        </tr>
+                    `).join('')}
                 </tbody>
             </table>
         </div>
-    `,
-
-    attendance: () => `
-        <div class="page-header">
-            <h2><i class="fas fa-calendar-check"></i> Attendance Management</h2>
-            <button class="btn" onclick="showAddAttendanceForm()">
-                <i class="fas fa-calendar-plus"></i> Mark Attendance
-            </button>
-            <button class="btn btn-secondary" onclick="generateAttendanceReport()">
-                <i class="fas fa-file-pdf"></i> Generate Report
-            </button>
-        </div>
-
-        <div class="data-table">
-            <table>
-                <thead>
-                    <tr>
-                        <th>Date</th>
-                        <th>Course</th>
-                        <th>Total Students</th>
-                        <th>Present</th>
-                        <th>Absent</th>
-                        <th>Attendance %</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${AppState.attendance.map(record => {
-                        const course = AppState.courses.find(c => c.code === record.course);
-                        const courseName = course ? course.name : record.course;
-                        return `
-                            <tr>
-                                <td>${record.date}</td>
-                                <td>${courseName}</td>
-                                <td>${record.totalStudents}</td>
-                                <td>${record.present}</td>
-                                <td>${record.absent}</td>
-                                <td><strong>${record.percentage}</strong></td>
-                                <td>
-                                    <div class="action-btns">
-                                        <button class="action-btn view-btn" onclick="viewAttendanceDetails('${record.id}')">
-                                            <i class="fas fa-eye"></i> View
-                                        </button>
-                                        <button class="action-btn edit-btn" onclick="editAttendance('${record.id}')">
-                                            <i class="fas fa-edit"></i> Edit
-                                        </button>
-                                    </div>
-                                </td>
-                            </tr>
-                        `;
-                    }).join('')}
-                </tbody>
-            </table>
-        </div>
-    `,
-
-    announcements: () => `
-        <div class="page-header">
-            <h2><i class="fas fa-bullhorn"></i> Announcements</h2>
-            <button class="btn" onclick="showAddAnnouncementForm()">
-                <i class="fas fa-plus"></i> Create Announcement
-            </button>
-        </div>
-
-        <div class="announcement-section">
-            ${AppState.announcements.map(announcement => `
-                <div class="announcement-item">
-                    <h4>${announcement.title}</h4>
-                    <p>${announcement.content}</p>
-                    <div class="date">Posted: ${announcement.date}</div>
-                    <div style="margin-top: 10px;">
-                        <button class="action-btn edit-btn" onclick="editAnnouncement('${announcement.id}')">
-                            <i class="fas fa-edit"></i> Edit
-                        </button>
-                        <button class="action-btn delete-btn" onclick="deleteAnnouncement('${announcement.id}')">
-                            <i class="fas fa-trash"></i> Delete
-                        </button>
-                    </div>
+        
+        <div style="margin-top: 30px; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 5px 15px rgba(0,0,0,0.05);">
+            <h3 style="color: #2c3e50; margin-bottom: 15px;">Grade Statistics</h3>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px;">
+                <div style="text-align: center; padding: 15px; background: #f8f9fa; border-radius: 8px;">
+                    <div style="font-size: 1.5rem; font-weight: bold; color: #3498db;">${calculateAverageGrade()}</div>
+                    <div style="font-size: 0.9rem; color: #7f8c8d;">Average Grade</div>
                 </div>
-            `).join('')}
+                <div style="text-align: center; padding: 15px; background: #f8f9fa; border-radius: 8px;">
+                    <div style="font-size: 1.5rem; font-weight: bold; color: #2ecc71;">${countGradesByLetter('A') + countGradesByLetter('A-')}</div>
+                    <div style="font-size: 0.9rem; color: #7f8c8d;">A Grades</div>
+                </div>
+                <div style="text-align: center; padding: 15px; background: #f8f9fa; border-radius: 8px;">
+                    <div style="font-size: 1.5rem; font-weight: bold; color: #f39c12;">${countGradesByLetter('B') + countGradesByLetter('B+') + countGradesByLetter('B-')}</div>
+                    <div style="font-size: 0.9rem; color: #7f8c8d;">B Grades</div>
+                </div>
+                <div style="text-align: center; padding: 15px; background: #f8f9fa; border-radius: 8px;">
+                    <div style="font-size: 1.5rem; font-weight: bold; color: #e74c3c;">${countGradesBelow('C')}</div>
+                    <div style="font-size: 0.9rem; color: #7f8c8d;">Below C</div>
+                </div>
+            </div>
         </div>
-    `,
+    `;
+}
 
-    reports: () => `
+// Helper functions for grades
+function calculateAverageGrade() {
+    const grades = getData('GRADES');
+    if (grades.length === 0) return 'N/A';
+    
+    const total = grades.reduce((sum, grade) => sum + grade.total, 0);
+    return (total / grades.length).toFixed(1);
+}
+
+function countGradesByLetter(letter) {
+    const grades = getData('GRADES');
+    return grades.filter(grade => grade.grade.startsWith(letter)).length;
+}
+
+function countGradesBelow(letter) {
+    const grades = getData('GRADES');
+    const letterOrder = ['A', 'B', 'C', 'D', 'F'];
+    const thresholdIndex = letterOrder.indexOf(letter);
+    
+    return grades.filter(grade => {
+        const gradeLetter = grade.grade.charAt(0);
+        const gradeIndex = letterOrder.indexOf(gradeLetter);
+        return gradeIndex > thresholdIndex;
+    }).length;
+}
+
+// ====== SETTINGS PAGE ======
+function loadSettingsPage() {
+    const pageContent = document.getElementById('pageContent');
+    pageContent.innerHTML = `
         <div class="page-header">
-            <h2><i class="fas fa-file-alt"></i> Generate Reports</h2>
-            <button class="btn" onclick="generateStudentReport()">
-                <i class="fas fa-user-graduate"></i> Student Report
-            </button>
-            <button class="btn btn-secondary" onclick="generateGradeReport()">
-                <i class="fas fa-chart-bar"></i> Grade Report
-            </button>
-            <button class="btn" onclick="generateAttendanceReport()">
-                <i class="fas fa-calendar-check"></i> Attendance Report
-            </button>
+            <h2><i class="fas fa-cog"></i> System Settings</h2>
         </div>
-
+        
         <div class="dashboard-grid">
             <div class="dashboard-card">
-                <h3><i class="fas fa-history"></i> Recent Reports</h3>
+                <h3><i class="fas fa-database"></i> Data Management</h3>
                 <ul class="card-links">
-                    ${AppState.reports.map(report => `
-                        <li>
-                            <a onclick="downloadReport('${report.id}')">
-                                <i class="fas fa-file-${report.type.toLowerCase()}"></i> ${report.name}
-                            </a>
-                            <span class="badge">${report.type}</span>
-                        </li>
-                    `).join('')}
+                    <li>
+                        <a onclick="backupData()">
+                            <i class="fas fa-save"></i> Backup Data
+                        </a>
+                    </li>
+                    <li>
+                        <a onclick="restoreData()">
+                            <i class="fas fa-undo"></i> Restore Data
+                        </a>
+                    </li>
+                    <li>
+                        <a onclick="exportAllData()">
+                            <i class="fas fa-download"></i> Export All Data
+                        </a>
+                    </li>
+                    <li>
+                        <a onclick="resetData()" style="color: #e74c3c;">
+                            <i class="fas fa-trash"></i> Reset All Data
+                        </a>
+                    </li>
                 </ul>
             </div>
-
+            
             <div class="dashboard-card">
-                <h3><i class="fas fa-cogs"></i> Report Options</h3>
+                <h3><i class="fas fa-user-shield"></i> Security</h3>
+                <ul class="card-links">
+                    <li>
+                        <a onclick="changePassword()">
+                            <i class="fas fa-key"></i> Change Password
+                        </a>
+                    </li>
+                    <li>
+                        <a onclick="manageUsers()">
+                            <i class="fas fa-users-cog"></i> Manage Users
+                        </a>
+                    </li>
+                    <li>
+                        <a onclick="auditLogs()">
+                            <i class="fas fa-clipboard-list"></i> View Audit Logs
+                        </a>
+                    </li>
+                    <li>
+                        <a onclick="sessionSettings()">
+                            <i class="fas fa-clock"></i> Session Settings
+                        </a>
+                    </li>
+                </ul>
+            </div>
+            
+            <div class="dashboard-card">
+                <h3><i class="fas fa-bell"></i> Notifications</h3>
+                <ul class="card-links">
+                    <li>
+                        <a onclick="emailSettings()">
+                            <i class="fas fa-envelope"></i> Email Settings
+                        </a>
+                    </li>
+                    <li>
+                        <a onclick="notificationPreferences()">
+                            <i class="fas fa-bell"></i> Notification Preferences
+                        </a>
+                    </li>
+                    <li>
+                        <a onclick="alertSettings()">
+                            <i class="fas fa-exclamation-triangle"></i> Alert Settings
+                        </a>
+                    </li>
+                </ul>
+            </div>
+            
+            <div class="dashboard-card">
+                <h3><i class="fas fa-chart-line"></i> System Info</h3>
                 <div style="padding: 15px;">
-                    <div class="form-group">
-                        <label>Report Type</label>
-                        <select id="reportType" class="form-control">
-                            <option value="student">Student Report</option>
-                            <option value="grade">Grade Report</option>
-                            <option value="attendance">Attendance Report</option>
-                            <option value="course">Course Report</option>
-                        </select>
+                    <div style="margin-bottom: 10px;">
+                        <strong>Version:</strong> EduAdmin v2.1.0
                     </div>
-                    <div class="form-group">
-                        <label>Format</label>
-                        <select id="reportFormat" class="form-control">
-                            <option value="pdf">PDF</option>
-                            <option value="excel">Excel</option>
-                            <option value="csv">CSV</option>
-                        </select>
+                    <div style="margin-bottom: 10px;">
+                        <strong>Last Backup:</strong> ${new Date().toLocaleDateString()}
                     </div>
-                    <div class="form-group">
-                        <label>Date Range</label>
-                        <div class="form-row">
-                            <input type="date" id="startDate" class="form-control" value="2023-04-01">
-                            <input type="date" id="endDate" class="form-control" value="2023-04-30">
-                        </div>
+                    <div style="margin-bottom: 10px;">
+                        <strong>Storage Used:</strong> ${calculateStorageUsage()}
                     </div>
-                    <button class="btn btn-secondary" onclick="generateCustomReport()" style="width: 100%; margin-top: 20px;">
-                        <i class="fas fa-file-download"></i> Generate Custom Report
-                    </button>
+                    <div>
+                        <strong>Users Online:</strong> 1
+                    </div>
                 </div>
             </div>
         </div>
-    `
-};
+        
+        <div style="margin-top: 30px; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 5px 15px rgba(0,0,0,0.05);">
+            <h3 style="color: #2c3e50; margin-bottom: 20px;">System Configuration</h3>
+            <div class="form-container">
+                <div class="form-group">
+                    <label>System Name</label>
+                    <input type="text" class="form-control" value="EduAdmin" placeholder="Enter system name">
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Academic Year</label>
+                        <select class="form-control">
+                            <option>2024-2025</option>
+                            <option>2023-2024</option>
+                            <option>2022-2023</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Semester</label>
+                        <select class="form-control">
+                            <option>Spring 2024</option>
+                            <option>Fall 2023</option>
+                            <option>Summer 2023</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Default Time Zone</label>
+                    <select class="form-control">
+                        <option>UTC-5 (EST)</option>
+                        <option>UTC-8 (PST)</option>
+                        <option>UTC+0 (GMT)</option>
+                    </select>
+                </div>
+                <button class="btn" style="margin-top: 20px;">
+                    <i class="fas fa-save"></i> Save Settings
+                </button>
+            </div>
+        </div>
+    `;
+}
 
-// Navigation Functions
-function navigateTo(pageId) {
-    AppState.currentPage = pageId;
-    
-    // Update page title
-    const titles = {
-        'dashboard': 'Admin Dashboard',
-        'students': 'Manage Students',
-        'courses': 'Manage Courses',
-        'grades': 'Manage Grades',
-        'attendance': 'Attendance Management',
-        'announcements': 'Announcements',
-        'reports': 'Generate Reports'
-    };
-    
-    document.getElementById('pageTitle').textContent = titles[pageId] || 'Admin Dashboard';
-    
-    // Update active menu item
-    document.querySelectorAll('.menu-links a').forEach(link => {
-        link.classList.remove('active');
-        if (link.getAttribute('data-page') === pageId) {
-            link.classList.add('active');
+function calculateStorageUsage() {
+    let total = 0;
+    Object.keys(STORAGE_KEYS).forEach(key => {
+        const data = localStorage.getItem(STORAGE_KEYS[key]);
+        if (data) {
+            total += data.length * 2; // Approximate bytes
         }
     });
     
-    // Load page content
-    const pageContent = document.getElementById('pageContent');
-    if (PageTemplates[pageId]) {
-        pageContent.innerHTML = PageTemplates[pageId]();
+    if (total < 1024) {
+        return total + ' bytes';
+    } else if (total < 1024 * 1024) {
+        return (total / 1024).toFixed(2) + ' KB';
     } else {
-        pageContent.innerHTML = `<div class="page-content">Page not found</div>`;
+        return (total / (1024 * 1024)).toFixed(2) + ' MB';
     }
 }
 
-// Modal Functions
-function showModal(title, content) {
-    document.getElementById('modalTitle').textContent = title;
-    document.getElementById('modalBody').innerHTML = content;
+// ====== ENHANCED MODAL FUNCTIONS ======
+function openAddStudentModal() {
+    document.getElementById('modalTitle').textContent = 'Add New Student';
+    document.getElementById('modalBody').innerHTML = `
+        <form id="addStudentForm" onsubmit="event.preventDefault(); saveNewStudent()">
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="studentId">Student ID *</label>
+                    <input type="text" id="studentId" class="form-control" required pattern="ST[0-9]{3}" title="Format: ST followed by 3 digits (e.g., ST001)">
+                </div>
+                <div class="form-group">
+                    <label for="studentName">Full Name *</label>
+                    <input type="text" id="studentName" class="form-control" required>
+                </div>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="studentEmail">Email *</label>
+                    <input type="email" id="studentEmail" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label for="studentPhone">Phone</label>
+                    <input type="tel" id="studentPhone" class="form-control" pattern="[0-9]{3}-[0-9]{3}-[0-9]{4}" placeholder="555-123-4567">
+                </div>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="studentCourse">Course *</label>
+                    <select id="studentCourse" class="form-control" required>
+                        <option value="">Select Course</option>
+                        ${getData('COURSES').map(course => `
+                            <option value="${course.code}">${course.name} (${course.code})</option>
+                        `).join('')}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="studentStatus">Status</label>
+                    <select id="studentStatus" class="form-control">
+                        <option value="active">Active</option>
+                        <option value="inactive">Inactive</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="enrollmentDate">Enrollment Date</label>
+                    <input type="date" id="enrollmentDate" class="form-control" value="${new Date().toISOString().split('T')[0]}">
+                </div>
+                <div class="form-group">
+                    <label for="studentGPA">Initial GPA</label>
+                    <input type="number" id="studentGPA" class="form-control" min="0" max="4" step="0.1" placeholder="0.0 - 4.0">
+                </div>
+            </div>
+            
+            <div style="display: flex; gap: 10px; margin-top: 30px;">
+                <button type="submit" class="btn" style="flex: 1;">
+                    <i class="fas fa-save"></i> Save Student
+                </button>
+                <button type="button" class="btn btn-secondary" onclick="closeModal()" style="flex: 1;">
+                    <i class="fas fa-times"></i> Cancel
+                </button>
+            </div>
+        </form>
+    `;
     document.getElementById('modal').style.display = 'block';
 }
 
-function closeModal() {
-    document.getElementById('modal').style.display = 'none';
+function saveNewStudent() {
+    const student = {
+        id: document.getElementById('studentId').value,
+        name: document.getElementById('studentName').value,
+        email: document.getElementById('studentEmail').value,
+        phone: document.getElementById('studentPhone').value || '',
+        course: document.getElementById('studentCourse').value,
+        status: document.getElementById('studentStatus').value,
+        enrollmentDate: document.getElementById('enrollmentDate').value || new Date().toISOString().split('T')[0],
+        gpa: parseFloat(document.getElementById('studentGPA').value) || 0
+    };
+    
+    addStudent(student);
+    showToast('Student added successfully!');
+    closeModal();
+    loadPage('students'); // Refresh the page
 }
 
+function openAddCourseModal() {
+    document.getElementById('modalTitle').textContent = 'Add New Course';
+    document.getElementById('modalBody').innerHTML = getAddCourseForm();
+    document.getElementById('modal').style.display = 'block';
+}
+
+function saveNewCourse() {
+    const course = {
+        code: document.getElementById('courseCode').value,
+        name: document.getElementById('courseName').value,
+        instructor: document.getElementById('courseInstructor').value,
+        credits: parseInt(document.getElementById('courseCredits').value),
+        students: 0,
+        capacity: parseInt(document.getElementById('courseCapacity').value) || 40,
+        description: document.getElementById('courseDescription').value || '',
+        status: 'active'
+    };
+    
+    addCourse(course);
+    showToast('Course added successfully!');
+    closeModal();
+    loadPage('courses'); // Refresh the page
+}
+
+function openAnnouncementModal() {
+    document.getElementById('modalTitle').textContent = 'Create Announcement';
+    document.getElementById('modalBody').innerHTML = `
+        <form id="announcementForm" onsubmit="event.preventDefault(); saveAnnouncement()">
+            <div class="form-group">
+                <label for="announcementTitle">Title *</label>
+                <input type="text" id="announcementTitle" class="form-control" required maxlength="100">
+            </div>
+            
+            <div class="form-group">
+                <label for="announcementContent">Content *</label>
+                <textarea id="announcementContent" class="form-control" rows="6" required maxlength="1000"></textarea>
+                <small style="color: #7f8c8d;">Maximum 1000 characters</small>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="announcementType">Type</label>
+                    <select id="announcementType" class="form-control">
+                        <option value="general">General</option>
+                        <option value="academic">Academic</option>
+                        <option value="event">Event</option>
+                        <option value="emergency">Emergency</option>
+                        <option value="maintenance">Maintenance</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="announcementPriority">Priority</label>
+                    <select id="announcementPriority" class="form-control">
+                        <option value="low">Low</option>
+                        <option value="normal">Normal</option>
+                        <option value="high">High</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="announcementSchedule">Schedule Date (Optional)</label>
+                    <input type="datetime-local" id="announcementSchedule" class="form-control">
+                </div>
+                <div class="form-group">
+                    <label for="announcementExpiry">Expiry Date (Optional)</label>
+                    <input type="date" id="announcementExpiry" class="form-control">
+                </div>
+            </div>
+            
+            <div style="display: flex; gap: 10px; margin-top: 30px;">
+                <button type="submit" class="btn" style="flex: 2;">
+                    <i class="fas fa-paper-plane"></i> Publish Now
+                </button>
+                <button type="button" class="btn btn-secondary" onclick="scheduleAnnouncement()" style="flex: 1;">
+                    <i class="fas fa-clock"></i> Schedule
+                </button>
+                <button type="button" class="btn btn-secondary" onclick="closeModal()" style="flex: 1;">
+                    <i class="fas fa-times"></i> Cancel
+                </button>
+            </div>
+        </form>
+    `;
+    document.getElementById('modal').style.display = 'block';
+}
+
+function saveAnnouncement() {
+    const announcement = {
+        title: document.getElementById('announcementTitle').value,
+        content: document.getElementById('announcementContent').value,
+        type: document.getElementById('announcementType').value,
+        priority: document.getElementById('announcementPriority').value,
+        schedule: document.getElementById('announcementSchedule').value || null,
+        expiry: document.getElementById('announcementExpiry').value || null
+    };
+    
+    addAnnouncement(announcement);
+    showToast('Announcement published successfully!');
+    closeModal();
+    loadPage('announcements'); // Refresh the page
+}
+
+function getAddCourseForm() {
+    return `
+        <form id="addCourseForm" onsubmit="event.preventDefault(); saveNewCourse()">
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="courseCode">Course Code *</label>
+                    <input type="text" id="courseCode" class="form-control" required pattern="[A-Z]{2,4}[0-9]{3}" title="Format: 2-4 letters followed by 3 digits (e.g., CS101)">
+                </div>
+                <div class="form-group">
+                    <label for="courseName">Course Name *</label>
+                    <input type="text" id="courseName" class="form-control" required maxlength="100">
+                </div>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="courseCredits">Credits *</label>
+                    <input type="number" id="courseCredits" class="form-control" min="1" max="6" required>
+                </div>
+                <div class="form-group">
+                    <label for="courseInstructor">Instructor *</label>
+                    <input type="text" id="courseInstructor" class="form-control" required>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label for="courseDescription">Description</label>
+                <textarea id="courseDescription" class="form-control" rows="4" maxlength="500"></textarea>
+                <small style="color: #7f8c8d;">Maximum 500 characters</small>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="courseCapacity">Maximum Capacity *</label>
+                    <input type="number" id="courseCapacity" class="form-control" min="1" max="200" value="40" required>
+                </div>
+                <div class="form-group">
+                    <label for="courseDepartment">Department</label>
+                    <select id="courseDepartment" class="form-control">
+                        <option value="computer_science">Computer Science</option>
+                        <option value="business">Business</option>
+                        <option value="engineering">Engineering</option>
+                        <option value="arts">Arts & Humanities</option>
+                        <option value="sciences">Natural Sciences</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="courseStartDate">Start Date</label>
+                    <input type="date" id="courseStartDate" class="form-control" value="${new Date().toISOString().split('T')[0]}">
+                </div>
+                <div class="form-group">
+                    <label for="courseEndDate">End Date</label>
+                    <input type="date" id="courseEndDate" class="form-control">
+                </div>
+            </div>
+            
+            <div style="display: flex; gap: 10px; margin-top: 30px;">
+                <button type="submit" class="btn" style="flex: 1;">
+                    <i class="fas fa-save"></i> Save Course
+                </button>
+                <button type="button" class="btn btn-secondary" onclick="closeModal()" style="flex: 1;">
+                    <i class="fas fa-times"></i> Cancel
+                </button>
+            </div>
+        </form>
+    `;
+}
+
+// ====== ENHANCED UTILITY FUNCTIONS ======
 function showToast(message, type = 'success') {
     const toast = document.getElementById('toast');
     const toastMessage = document.getElementById('toastMessage');
     
-    // Set color based on type
-    if (type === 'error') {
+    // Set message and color based on type
+    toastMessage.textContent = message;
+    
+    if (type === 'success') {
+        toast.style.backgroundColor = '#2ecc71';
+    } else if (type === 'error') {
         toast.style.backgroundColor = '#e74c3c';
     } else if (type === 'warning') {
         toast.style.backgroundColor = '#f39c12';
-    } else {
-        toast.style.backgroundColor = '#2ecc71';
+    } else if (type === 'info') {
+        toast.style.backgroundColor = '#3498db';
     }
     
-    toastMessage.textContent = message;
     toast.style.display = 'block';
     
     setTimeout(() => {
@@ -628,1095 +1496,401 @@ function showToast(message, type = 'success') {
     }, 3000);
 }
 
-// Student Management Functions
-function showAddStudentForm() {
-    const formContent = `
-        <form id="addStudentForm">
-            <div class="form-row">
-                <div class="form-group">
-                    <label for="firstName">First Name *</label>
-                    <input type="text" id="firstName" class="form-control" required>
-                </div>
-                <div class="form-group">
-                    <label for="lastName">Last Name *</label>
-                    <input type="text" id="lastName" class="form-control" required>
-                </div>
-            </div>
-            
-            <div class="form-row">
-                <div class="form-group">
-                    <label for="email">Email Address *</label>
-                    <input type="email" id="email" class="form-control" required>
-                </div>
-                <div class="form-group">
-                    <label for="phone">Phone Number</label>
-                    <input type="tel" id="phone" class="form-control">
-                </div>
-            </div>
-            
-            <div class="form-row">
-                <div class="form-group">
-                    <label for="course">Course *</label>
-                    <select id="course" class="form-control" required>
-                        <option value="">Select a course</option>
-                        ${AppState.courses.map(course => `<option value="${course.code}">${course.name} (${course.code})</option>`).join('')}
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="enrollmentDate">Enrollment Date *</label>
-                    <input type="date" id="enrollmentDate" class="form-control" value="${new Date().toISOString().split('T')[0]}" required>
-                </div>
-            </div>
-            
-            <div class="form-group">
-                <label for="address">Address</label>
-                <textarea id="address" class="form-control" rows="3"></textarea>
-            </div>
-            
-            <div class="form-group">
-                <label for="status">Status *</label>
-                <select id="status" class="form-control" required>
-                    <option value="active">Active</option>
-                    <option value="inactive">Inactive</option>
-                </select>
-            </div>
-            
-            <div class="form-group" style="display: flex; gap: 10px; margin-top: 30px;">
-                <button type="button" class="btn btn-secondary" onclick="saveStudent()">
-                    <i class="fas fa-save"></i> Save Student
-                </button>
-                <button type="button" class="btn" onclick="closeModal()" style="background-color: #95a5a6;">
-                    <i class="fas fa-times"></i> Cancel
-                </button>
-            </div>
-        </form>
-    `;
-    
-    showModal('Add New Student', formContent);
+function logout() {
+    showToast('Logging out...', 'info');
+    setTimeout(() => {
+        // In a real app, you would clear session and redirect to login
+        window.location.href = 'login.html';
+    }, 1500);
 }
 
-function saveStudent() {
-    const firstName = document.getElementById('firstName').value;
-    const lastName = document.getElementById('lastName').value;
-    const email = document.getElementById('email').value;
-    const course = document.getElementById('course').value;
-    
-    if (!firstName || !lastName || !email || !course) {
-        showToast('Please fill in all required fields', 'error');
-        return;
-    }
-    
-    // Generate new student ID
-    const newId = 'S' + String(AppState.students.length + 1).padStart(3, '0');
-    
-    // Add new student
-    AppState.students.push({
-        id: newId,
-        firstName,
-        lastName,
-        email,
-        course: course,
-        status: document.getElementById('status').value,
-        enrollmentDate: document.getElementById('enrollmentDate').value,
-        phone: document.getElementById('phone').value,
-        address: document.getElementById('address').value
+// ====== NEW DATA MANAGEMENT FUNCTIONS ======
+function backupData() {
+    const backup = {};
+    Object.keys(STORAGE_KEYS).forEach(key => {
+        backup[key] = getData(key);
     });
     
-    closeModal();
-    showToast(`Student ${firstName} ${lastName} added successfully!`);
-    navigateTo('students');
+    const backupStr = JSON.stringify(backup, null, 2);
+    const blob = new Blob([backupStr], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `eduadmin_backup_${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    
+    showToast('Backup created and downloaded successfully!');
 }
 
-function editStudent(studentId) {
-    const student = AppState.students.find(s => s.id === studentId);
-    if (!student) return;
-    
-    const formContent = `
-        <form id="editStudentForm">
-            <div class="form-row">
-                <div class="form-group">
-                    <label for="editFirstName">First Name *</label>
-                    <input type="text" id="editFirstName" class="form-control" value="${student.firstName}" required>
-                </div>
-                <div class="form-group">
-                    <label for="editLastName">Last Name *</label>
-                    <input type="text" id="editLastName" class="form-control" value="${student.lastName}" required>
-                </div>
-            </div>
-            
-            <div class="form-row">
-                <div class="form-group">
-                    <label for="editEmail">Email Address *</label>
-                    <input type="email" id="editEmail" class="form-control" value="${student.email}" required>
-                </div>
-                <div class="form-group">
-                    <label for="editPhone">Phone Number</label>
-                    <input type="tel" id="editPhone" class="form-control" value="${student.phone || ''}">
-                </div>
-            </div>
-            
-            <div class="form-row">
-                <div class="form-group">
-                    <label for="editCourse">Course *</label>
-                    <select id="editCourse" class="form-control" required>
-                        <option value="">Select a course</option>
-                        ${AppState.courses.map(course => `
-                            <option value="${course.code}" ${course.code === student.course ? 'selected' : ''}>${course.name} (${course.code})</option>
-                        `).join('')}
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="editStatus">Status *</label>
-                    <select id="editStatus" class="form-control" required>
-                        <option value="active" ${student.status === 'active' ? 'selected' : ''}>Active</option>
-                        <option value="inactive" ${student.status === 'inactive' ? 'selected' : ''}>Inactive</option>
-                    </select>
-                </div>
-            </div>
-            
-            <div class="form-group">
-                <label for="editAddress">Address</label>
-                <textarea id="editAddress" class="form-control" rows="3">${student.address || ''}</textarea>
-            </div>
-            
-            <div class="form-group" style="display: flex; gap: 10px; margin-top: 30px;">
-                <button type="button" class="btn btn-secondary" onclick="updateStudent('${studentId}')">
-                    <i class="fas fa-save"></i> Update Student
-                </button>
-                <button type="button" class="btn" onclick="closeModal()" style="background-color: #95a5a6;">
-                    <i class="fas fa-times"></i> Cancel
-                </button>
-            </div>
-        </form>
-    `;
-    
-    showModal('Edit Student', formContent);
-}
-
-function updateStudent(studentId) {
-    const studentIndex = AppState.students.findIndex(s => s.id === studentId);
-    if (studentIndex === -1) return;
-    
-    AppState.students[studentIndex] = {
-        ...AppState.students[studentIndex],
-        firstName: document.getElementById('editFirstName').value,
-        lastName: document.getElementById('editLastName').value,
-        email: document.getElementById('editEmail').value,
-        course: document.getElementById('editCourse').value,
-        status: document.getElementById('editStatus').value,
-        phone: document.getElementById('editPhone').value,
-        address: document.getElementById('editAddress').value
+function exportAllData() {
+    const exportData = {
+        students: getData('STUDENTS'),
+        courses: getData('COURSES'),
+        grades: getData('GRADES'),
+        attendance: getData('ATTENDANCE'),
+        announcements: getData('ANNOUNCEMENTS'),
+        exportedAt: new Date().toISOString()
     };
     
-    closeModal();
-    showToast('Student updated successfully!');
-    navigateTo('students');
+    const exportStr = JSON.stringify(exportData, null, 2);
+    const blob = new Blob([exportStr], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `eduadmin_export_${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    
+    showToast('All data exported successfully!');
 }
 
-function viewStudentDetails(studentId) {
-    const student = AppState.students.find(s => s.id === studentId);
-    if (!student) return;
-    
-    const course = AppState.courses.find(c => c.code === student.course);
-    const courseName = course ? course.name : student.course;
-    
-    const content = `
-        <div style="padding: 20px;">
-            <h3 style="color: #2c3e50; margin-bottom: 20px;">${student.firstName} ${student.lastName}</h3>
-            <div class="form-row">
-                <div class="form-group">
-                    <label>Student ID</label>
-                    <div class="form-control" style="background-color: #f8f9fa;">${student.id}</div>
-                </div>
-                <div class="form-group">
-                    <label>Status</label>
-                    <div class="form-control" style="background-color: #f8f9fa;">
-                        <span class="status-${student.status}">${student.status.charAt(0).toUpperCase() + student.status.slice(1)}</span>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="form-row">
-                <div class="form-group">
-                    <label>Email</label>
-                    <div class="form-control" style="background-color: #f8f9fa;">${student.email}</div>
-                </div>
-                <div class="form-group">
-                    <label>Phone</label>
-                    <div class="form-control" style="background-color: #f8f9fa;">${student.phone || 'N/A'}</div>
-                </div>
-            </div>
-            
-            <div class="form-row">
-                <div class="form-group">
-                    <label>Course</label>
-                    <div class="form-control" style="background-color: #f8f9fa;">${courseName}</div>
-                </div>
-                <div class="form-group">
-                    <label>Enrollment Date</label>
-                    <div class="form-control" style="background-color: #f8f9fa;">${student.enrollmentDate}</div>
-                </div>
-            </div>
-            
-            <div class="form-group">
-                <label>Address</label>
-                <div class="form-control" style="background-color: #f8f9fa; min-height: 60px;">${student.address || 'N/A'}</div>
-            </div>
-            
-            <div style="margin-top: 30px; text-align: center;">
-                <button class="btn" onclick="editStudent('${studentId}')">
-                    <i class="fas fa-edit"></i> Edit Student
-                </button>
-            </div>
-        </div>
-    `;
-    
-    showModal('Student Details', content);
-}
-
-function deleteStudent(studentId) {
-    if (confirm('Are you sure you want to delete this student?')) {
-        AppState.students = AppState.students.filter(s => s.id !== studentId);
-        showToast('Student deleted successfully!');
-        navigateTo('students');
+function resetData() {
+    if (confirm('⚠️ WARNING: This will reset ALL data to initial values. This action cannot be undone. Are you sure?')) {
+        Object.keys(STORAGE_KEYS).forEach(key => {
+            const dataKey = key.toLowerCase().slice(0, -1);
+            localStorage.setItem(STORAGE_KEYS[key], JSON.stringify(INITIAL_DATA[dataKey] || []));
+        });
+        showToast('Data has been reset to initial values.', 'warning');
+        loadPage('dashboard');
     }
 }
 
-// Course Management Functions
-function showAddCourseForm() {
-    const formContent = `
-        <form id="addCourseForm">
-            <div class="form-row">
-                <div class="form-group">
-                    <label for="courseCode">Course Code *</label>
-                    <input type="text" id="courseCode" class="form-control" placeholder="e.g., CS101" required>
-                </div>
-                <div class="form-group">
-                    <label for="courseName">Course Name *</label>
-                    <input type="text" id="courseName" class="form-control" placeholder="e.g., Introduction to Programming" required>
-                </div>
-            </div>
-            
-            <div class="form-row">
-                <div class="form-group">
-                    <label for="instructor">Instructor *</label>
-                    <input type="text" id="instructor" class="form-control" placeholder="e.g., Dr. John Doe" required>
-                </div>
-                <div class="form-group">
-                    <label for="department">Department *</label>
-                    <select id="department" class="form-control" required>
-                        <option value="">Select department</option>
-                        <option value="Computer Science">Computer Science</option>
-                        <option value="Business">Business</option>
-                        <option value="Engineering">Engineering</option>
-                        <option value="Psychology">Psychology</option>
-                        <option value="Mathematics">Mathematics</option>
-                        <option value="Physics">Physics</option>
-                    </select>
-                </div>
-            </div>
-            
-            <div class="form-row">
-                <div class="form-group">
-                    <label for="credits">Credits *</label>
-                    <input type="number" id="credits" class="form-control" min="1" max="6" value="3" required>
-                </div>
-                <div class="form-group">
-                    <label for="maxStudents">Maximum Students</label>
-                    <input type="number" id="maxStudents" class="form-control" min="1" max="100" value="50">
-                </div>
-            </div>
-            
-            <div class="form-group">
-                <label for="courseDescription">Course Description</label>
-                <textarea id="courseDescription" class="form-control" rows="4" placeholder="Enter course description..."></textarea>
-            </div>
-            
-            <div class="form-group" style="display: flex; gap: 10px; margin-top: 30px;">
-                <button type="button" class="btn btn-secondary" onclick="saveCourse()">
-                    <i class="fas fa-save"></i> Save Course
-                </button>
-                <button type="button" class="btn" onclick="closeModal()" style="background-color: #95a5a6;">
-                    <i class="fas fa-times"></i> Cancel
-                </button>
-            </div>
-        </form>
-    `;
-    
-    showModal('Add New Course', formContent);
+function refreshAnalytics() {
+    loadPage('analytics');
+    showToast('Analytics refreshed!', 'info');
 }
 
-function saveCourse() {
-    const courseCode = document.getElementById('courseCode').value;
-    const courseName = document.getElementById('courseName').value;
-    
-    if (!courseCode || !courseName) {
-        showToast('Please fill in all required fields', 'error');
-        return;
-    }
-    
-    // Check if course code already exists
-    if (AppState.courses.find(c => c.code === courseCode)) {
-        showToast('Course code already exists!', 'error');
-        return;
-    }
-    
-    // Add new course
-    AppState.courses.push({
-        code: courseCode,
-        name: courseName,
-        instructor: document.getElementById('instructor').value,
-        department: document.getElementById('department').value,
-        students: 0,
-        credits: parseInt(document.getElementById('credits').value),
-        description: document.getElementById('courseDescription').value,
-        maxStudents: parseInt(document.getElementById('maxStudents').value) || 50
-    });
-    
-    closeModal();
-    showToast(`Course ${courseCode} added successfully!`);
-    navigateTo('courses');
-}
-
-function editCourse(courseCode) {
-    const course = AppState.courses.find(c => c.code === courseCode);
-    if (!course) return;
-    
-    const formContent = `
-        <form id="editCourseForm">
-            <div class="form-row">
-                <div class="form-group">
-                    <label for="editCourseCode">Course Code</label>
-                    <div class="form-control" style="background-color: #f8f9fa;">${course.code}</div>
-                </div>
-                <div class="form-group">
-                    <label for="editCourseName">Course Name *</label>
-                    <input type="text" id="editCourseName" class="form-control" value="${course.name}" required>
-                </div>
-            </div>
-            
-            <div class="form-row">
-                <div class="form-group">
-                    <label for="editInstructor">Instructor *</label>
-                    <input type="text" id="editInstructor" class="form-control" value="${course.instructor}" required>
-                </div>
-                <div class="form-group">
-                    <label for="editDepartment">Department *</label>
-                    <select id="editDepartment" class="form-control" required>
-                        <option value="Computer Science" ${course.department === 'Computer Science' ? 'selected' : ''}>Computer Science</option>
-                        <option value="Business" ${course.department === 'Business' ? 'selected' : ''}>Business</option>
-                        <option value="Engineering" ${course.department === 'Engineering' ? 'selected' : ''}>Engineering</option>
-                        <option value="Psychology" ${course.department === 'Psychology' ? 'selected' : ''}>Psychology</option>
-                        <option value="Mathematics" ${course.department === 'Mathematics' ? 'selected' : ''}>Mathematics</option>
-                        <option value="Physics" ${course.department === 'Physics' ? 'selected' : ''}>Physics</option>
-                    </select>
-                </div>
-            </div>
-            
-            <div class="form-row">
-                <div class="form-group">
-                    <label for="editCredits">Credits *</label>
-                    <input type="number" id="editCredits" class="form-control" min="1" max="6" value="${course.credits}" required>
-                </div>
-                <div class="form-group">
-                    <label for="editStudents">Students Enrolled</label>
-                    <input type="number" id="editStudents" class="form-control" min="0" max="100" value="${course.students}">
-                </div>
-            </div>
-            
-            <div class="form-group">
-                <label for="editCourseDescription">Course Description</label>
-                <textarea id="editCourseDescription" class="form-control" rows="4">${course.description || ''}</textarea>
-            </div>
-            
-            <div class="form-group" style="display: flex; gap: 10px; margin-top: 30px;">
-                <button type="button" class="btn btn-secondary" onclick="updateCourse('${courseCode}')">
-                    <i class="fas fa-save"></i> Update Course
-                </button>
-                <button type="button" class="btn" onclick="closeModal()" style="background-color: #95a5a6;">
-                    <i class="fas fa-times"></i> Cancel
-                </button>
-            </div>
-        </form>
-    `;
-    
-    showModal('Edit Course', formContent);
-}
-
-function updateCourse(courseCode) {
-    const courseIndex = AppState.courses.findIndex(c => c.code === courseCode);
-    if (courseIndex === -1) return;
-    
-    AppState.courses[courseIndex] = {
-        ...AppState.courses[courseIndex],
-        name: document.getElementById('editCourseName').value,
-        instructor: document.getElementById('editInstructor').value,
-        department: document.getElementById('editDepartment').value,
-        credits: parseInt(document.getElementById('editCredits').value),
-        students: parseInt(document.getElementById('editStudents').value),
-        description: document.getElementById('editCourseDescription').value
+function exportAnalytics() {
+    const stats = calculateStats();
+    const analyticsData = {
+        summary: stats,
+        generatedAt: new Date().toISOString(),
+        dataPoints: {
+            totalStudents: getData('STUDENTS').length,
+            totalCourses: getData('COURSES').length,
+            totalGrades: getData('GRADES').length
+        }
     };
     
-    closeModal();
-    showToast('Course updated successfully!');
-    navigateTo('courses');
+    const exportStr = JSON.stringify(analyticsData, null, 2);
+    const blob = new Blob([exportStr], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `analytics_report_${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    
+    showToast('Analytics report exported successfully!');
 }
 
-function viewCourseDetails(courseCode) {
-    const course = AppState.courses.find(c => c.code === courseCode);
-    if (!course) return;
-    
-    // Count students in this course
-    const studentsInCourse = AppState.students.filter(s => s.course === courseCode).length;
-    
-    const content = `
-        <div style="padding: 20px;">
-            <h3 style="color: #2c3e50; margin-bottom: 20px;">${course.name} (${course.code})</h3>
-            <div class="form-row">
-                <div class="form-group">
-                    <label>Instructor</label>
-                    <div class="form-control" style="background-color: #f8f9fa;">${course.instructor}</div>
-                </div>
-                <div class="form-group">
-                    <label>Department</label>
-                    <div class="form-control" style="background-color: #f8f9fa;">${course.department}</div>
-                </div>
-            </div>
-            
-            <div class="form-row">
-                <div class="form-group">
-                    <label>Credits</label>
-                    <div class="form-control" style="background-color: #f8f9fa;">${course.credits}</div>
-                </div>
-                <div class="form-group">
-                    <label>Students Enrolled</label>
-                    <div class="form-control" style="background-color: #f8f9fa;">${studentsInCourse} / ${course.students}</div>
-                </div>
-            </div>
-            
-            <div class="form-group">
-                <label>Description</label>
-                <div class="form-control" style="background-color: #f8f9fa; min-height: 100px;">${course.description || 'No description available'}</div>
-            </div>
-            
-            <div style="margin-top: 30px; text-align: center;">
-                <button class="btn" onclick="editCourse('${courseCode}')">
-                    <i class="fas fa-edit"></i> Edit Course
-                </button>
-            </div>
-        </div>
-    `;
-    
-    showModal('Course Details', content);
-}
-
-function deleteCourse(courseCode) {
-    if (confirm('Are you sure you want to delete this course? This will also remove all students enrolled in this course.')) {
-        // Remove course
-        AppState.courses = AppState.courses.filter(c => c.code !== courseCode);
-        
-        // Remove students from this course
-        AppState.students = AppState.students.filter(s => s.course !== courseCode);
-        
-        showToast('Course deleted successfully!');
-        navigateTo('courses');
-    }
-}
-
-// Grade Management Functions
-function showAddGradeForm() {
-    const formContent = `
-        <form id="addGradeForm">
-            <div class="form-row">
-                <div class="form-group">
-                    <label for="gradeStudent">Student *</label>
-                    <select id="gradeStudent" class="form-control" required>
-                        <option value="">Select student</option>
-                        ${AppState.students.map(student => `
-                            <option value="${student.id}">${student.firstName} ${student.lastName} (${student.id})</option>
-                        `).join('')}
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="gradeCourse">Course *</label>
-                    <select id="gradeCourse" class="form-control" required>
-                        <option value="">Select course</option>
-                        ${AppState.courses.map(course => `
-                            <option value="${course.code}">${course.name} (${course.code})</option>
-                        `).join('')}
-                    </select>
-                </div>
-            </div>
-            
-            <div class="form-row">
-                <div class="form-group">
-                    <label for="midtermGrade">Midterm Grade (0-100)</label>
-                    <input type="number" id="midtermGrade" class="form-control" min="0" max="100" value="0">
-                </div>
-                <div class="form-group">
-                    <label for="finalGrade">Final Grade (0-100)</label>
-                    <input type="number" id="finalGrade" class="form-control" min="0" max="100" value="0">
-                </div>
-            </div>
-            
-            <div class="form-row">
-                <div class="form-group">
-                    <label for="assignmentsGrade">Assignments Grade (0-100)</label>
-                    <input type="number" id="assignmentsGrade" class="form-control" min="0" max="100" value="0">
-                </div>
-                <div class="form-group">
-                    <label for="overallGrade">Overall Grade (Letter)</label>
-                    <select id="overallGrade" class="form-control">
-                        <option value="">Select grade</option>
-                        <option value="A">A</option>
-                        <option value="A-">A-</option>
-                        <option value="B+">B+</option>
-                        <option value="B">B</option>
-                        <option value="B-">B-</option>
-                        <option value="C+">C+</option>
-                        <option value="C">C</option>
-                        <option value="C-">C-</option>
-                        <option value="D">D</option>
-                        <option value="F">F</option>
-                    </select>
-                </div>
-            </div>
-            
-            <div class="form-group" style="display: flex; gap: 10px; margin-top: 30px;">
-                <button type="button" class="btn btn-secondary" onclick="saveGrade()">
-                    <i class="fas fa-save"></i> Save Grade
-                </button>
-                <button type="button" class="btn" onclick="closeModal()" style="background-color: #95a5a6;">
-                    <i class="fas fa-times"></i> Cancel
-                </button>
-            </div>
-        </form>
-    `;
-    
-    showModal('Add Grade', formContent);
-}
-
-function saveGrade() {
-    const studentId = document.getElementById('gradeStudent').value;
-    const courseCode = document.getElementById('gradeCourse').value;
-    
-    if (!studentId || !courseCode) {
-        showToast('Please select student and course', 'error');
-        return;
-    }
-    
-    // Check if grade already exists for this student and course
-    const existingGrade = AppState.grades.find(g => g.studentId === studentId && g.course === courseCode);
-    if (existingGrade) {
-        showToast('Grade already exists for this student and course!', 'error');
-        return;
-    }
-    
-    const student = AppState.students.find(s => s.id === studentId);
-    if (!student) {
-        showToast('Student not found!', 'error');
-        return;
-    }
-    
-    // Generate new grade ID
-    const newId = 'G' + String(AppState.grades.length + 1).padStart(3, '0');
-    
-    // Add new grade
-    AppState.grades.push({
-        id: newId,
-        studentId: studentId,
-        studentName: `${student.firstName} ${student.lastName}`,
-        course: courseCode,
-        midterm: parseInt(document.getElementById('midtermGrade').value) || 0,
-        final: parseInt(document.getElementById('finalGrade').value) || 0,
-        assignments: parseInt(document.getElementById('assignmentsGrade').value) || 0,
-        overall: document.getElementById('overallGrade').value || 'N/A'
-    });
-    
-    closeModal();
-    showToast('Grade added successfully!');
-    navigateTo('grades');
-}
-
-function editGrade(gradeId) {
-    const grade = AppState.grades.find(g => g.id === gradeId);
-    if (!grade) return;
-    
-    const formContent = `
-        <form id="editGradeForm">
-            <div class="form-row">
-                <div class="form-group">
-                    <label>Student</label>
-                    <div class="form-control" style="background-color: #f8f9fa;">${grade.studentName}</div>
-                </div>
-                <div class="form-group">
-                    <label>Course</label>
-                    <div class="form-control" style="background-color: #f8f9fa;">${grade.course}</div>
-                </div>
-            </div>
-            
-            <div class="form-row">
-                <div class="form-group">
-                    <label for="editMidtermGrade">Midterm Grade (0-100)</label>
-                    <input type="number" id="editMidtermGrade" class="form-control" min="0" max="100" value="${grade.midterm}">
-                </div>
-                <div class="form-group">
-                    <label for="editFinalGrade">Final Grade (0-100)</label>
-                    <input type="number" id="editFinalGrade" class="form-control" min="0" max="100" value="${grade.final}">
-                </div>
-            </div>
-            
-            <div class="form-row">
-                <div class="form-group">
-                    <label for="editAssignmentsGrade">Assignments Grade (0-100)</label>
-                    <input type="number" id="editAssignmentsGrade" class="form-control" min="0" max="100" value="${grade.assignments}">
-                </div>
-                <div class="form-group">
-                    <label for="editOverallGrade">Overall Grade (Letter)</label>
-                    <select id="editOverallGrade" class="form-control">
-                        <option value="">Select grade</option>
-                        <option value="A" ${grade.overall === 'A' ? 'selected' : ''}>A</option>
-                        <option value="A-" ${grade.overall === 'A-' ? 'selected' : ''}>A-</option>
-                        <option value="B+" ${grade.overall === 'B+' ? 'selected' : ''}>B+</option>
-                        <option value="B" ${grade.overall === 'B' ? 'selected' : ''}>B</option>
-                        <option value="B-" ${grade.overall === 'B-' ? 'selected' : ''}>B-</option>
-                        <option value="C+" ${grade.overall === 'C+' ? 'selected' : ''}>C+</option>
-                        <option value="C" ${grade.overall === 'C' ? 'selected' : ''}>C</option>
-                        <option value="C-" ${grade.overall === 'C-' ? 'selected' : ''}>C-</option>
-                        <option value="D" ${grade.overall === 'D' ? 'selected' : ''}>D</option>
-                        <option value="F" ${grade.overall === 'F' ? 'selected' : ''}>F</option>
-                    </select>
-                </div>
-            </div>
-            
-            <div class="form-group" style="display: flex; gap: 10px; margin-top: 30px;">
-                <button type="button" class="btn btn-secondary" onclick="updateGrade('${gradeId}')">
-                    <i class="fas fa-save"></i> Update Grade
-                </button>
-                <button type="button" class="btn" onclick="closeModal()" style="background-color: #95a5a6;">
-                    <i class="fas fa-times"></i> Cancel
-                </button>
-            </div>
-        </form>
-    `;
-    
-    showModal('Edit Grade', formContent);
-}
-
-function updateGrade(gradeId) {
-    const gradeIndex = AppState.grades.findIndex(g => g.id === gradeId);
-    if (gradeIndex === -1) return;
-    
-    AppState.grades[gradeIndex] = {
-        ...AppState.grades[gradeIndex],
-        midterm: parseInt(document.getElementById('editMidtermGrade').value) || 0,
-        final: parseInt(document.getElementById('editFinalGrade').value) || 0,
-        assignments: parseInt(document.getElementById('editAssignmentsGrade').value) || 0,
-        overall: document.getElementById('editOverallGrade').value || 'N/A'
+// ====== ENHANCED PLACEHOLDER FUNCTIONS ======
+function generateReport(type) {
+    const reports = {
+        student: 'Student Performance Report',
+        course: 'Course Analytics Report',
+        attendance: 'Attendance Summary Report',
+        financial: 'Financial Statement Report',
+        system: 'System Health Report',
+        comprehensive: 'Comprehensive Academic Report'
     };
     
-    closeModal();
-    showToast('Grade updated successfully!');
-    navigateTo('grades');
+    showToast(`${reports[type] || 'Report'} generated successfully! Download will start shortly...`);
+    
+    // Simulate download
+    setTimeout(() => {
+        const reportData = `EduAdmin ${reports[type] || 'Report'}\nGenerated: ${new Date().toLocaleString()}\n\nSummary:\n- Total Students: ${calculateStats().totalStudents}\n- Average GPA: ${calculateStats().averageGPA}\n- Attendance Rate: ${calculateStats().attendanceRate}`;
+        const blob = new Blob([reportData], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${reports[type] || 'report'}_${new Date().toISOString().split('T')[0]}.txt`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    }, 1000);
 }
 
-function deleteGrade(gradeId) {
-    if (confirm('Are you sure you want to delete this grade?')) {
-        AppState.grades = AppState.grades.filter(g => g.id !== gradeId);
-        showToast('Grade deleted successfully!');
-        navigateTo('grades');
-    }
+function sendBulkEmail() {
+    const students = getData('STUDENTS');
+    showToast(`Bulk email sent to ${students.length} students!`);
 }
 
-function importGrades() {
-    showToast('Import grades functionality would open here', 'warning');
+function uploadGrades() {
+    showToast('Grade upload interface opened!', 'info');
+    // This would open a file upload modal in a real implementation
 }
 
-// Attendance Management Functions
-function showAddAttendanceForm() {
-    const formContent = `
-        <form id="addAttendanceForm">
-            <div class="form-row">
-                <div class="form-group">
-                    <label for="attendanceDate">Date *</label>
-                    <input type="date" id="attendanceDate" class="form-control" value="${new Date().toISOString().split('T')[0]}" required>
-                </div>
-                <div class="form-group">
-                    <label for="attendanceCourse">Course *</label>
-                    <select id="attendanceCourse" class="form-control" required>
-                        <option value="">Select course</option>
-                        ${AppState.courses.map(course => `
-                            <option value="${course.code}">${course.name} (${course.code})</option>
-                        `).join('')}
-                    </select>
-                </div>
-            </div>
-            
-            <div class="form-row">
-                <div class="form-group">
-                    <label for="totalStudents">Total Students</label>
-                    <input type="number" id="totalStudents" class="form-control" min="1" max="100" value="30">
-                </div>
-                <div class="form-group">
-                    <label for="presentStudents">Present Students</label>
-                    <input type="number" id="presentStudents" class="form-control" min="0" max="100" value="28">
-                </div>
-            </div>
-            
-            <div class="form-group">
-                <label for="attendanceNotes">Notes</label>
-                <textarea id="attendanceNotes" class="form-control" rows="3" placeholder="Any additional notes..."></textarea>
-            </div>
-            
-            <div class="form-group" style="display: flex; gap: 10px; margin-top: 30px;">
-                <button type="button" class="btn btn-secondary" onclick="saveAttendance()">
-                    <i class="fas fa-save"></i> Save Attendance
-                </button>
-                <button type="button" class="btn" onclick="closeModal()" style="background-color: #95a5a6;">
-                    <i class="fas fa-times"></i> Cancel
-                </button>
-            </div>
-        </form>
-    `;
+function markAttendance() {
+    const today = new Date().toISOString().split('T')[0];
+    const students = getData('STUDENTS');
     
-    showModal('Mark Attendance', formContent);
+    // Mark all active students as present for today
+    const newAttendance = students
+        .filter(s => s.status === 'active')
+        .map(student => ({
+            studentId: student.id,
+            date: today,
+            status: 'present'
+        }));
+    
+    const existingAttendance = getData('ATTENDANCE');
+    const updatedAttendance = [
+        ...existingAttendance.filter(a => a.date !== today),
+        ...newAttendance
+    ];
+    
+    saveData('ATTENDANCE', updatedAttendance);
+    showToast(`Attendance marked for ${newAttendance.length} students today!`);
+    loadPage('dashboard'); // Refresh dashboard to show updated stats
 }
 
-function saveAttendance() {
-    const date = document.getElementById('attendanceDate').value;
-    const course = document.getElementById('attendanceCourse').value;
-    
-    if (!date || !course) {
-        showToast('Please select date and course', 'error');
-        return;
-    }
-    
-    const totalStudents = parseInt(document.getElementById('totalStudents').value) || 0;
-    const presentStudents = parseInt(document.getElementById('presentStudents').value) || 0;
-    const absentStudents = totalStudents - presentStudents;
-    const percentage = totalStudents > 0 ? ((presentStudents / totalStudents) * 100).toFixed(1) + '%' : '0%';
-    
-    // Generate new attendance ID
-    const newId = 'A' + String(AppState.attendance.length + 1).padStart(3, '0');
-    
-    // Add new attendance record
-    AppState.attendance.push({
-        id: newId,
-        date: date,
-        course: course,
-        totalStudents: totalStudents,
-        present: presentStudents,
-        absent: absentStudents,
-        percentage: percentage,
-        notes: document.getElementById('attendanceNotes').value
-    });
-    
-    closeModal();
-    showToast('Attendance recorded successfully!');
-    navigateTo('attendance');
+function scheduleAnnouncement() {
+    showToast('Announcement scheduled successfully!', 'info');
 }
 
-function editAttendance(attendanceId) {
-    const record = AppState.attendance.find(a => a.id === attendanceId);
-    if (!record) return;
-    
-    const formContent = `
-        <form id="editAttendanceForm">
-            <div class="form-row">
-                <div class="form-group">
-                    <label for="editAttendanceDate">Date *</label>
-                    <input type="date" id="editAttendanceDate" class="form-control" value="${record.date}" required>
-                </div>
-                <div class="form-group">
-                    <label>Course</label>
-                    <div class="form-control" style="background-color: #f8f9fa;">${record.course}</div>
-                </div>
-            </div>
-            
-            <div class="form-row">
-                <div class="form-group">
-                    <label for="editTotalStudents">Total Students</label>
-                    <input type="number" id="editTotalStudents" class="form-control" min="1" max="100" value="${record.totalStudents}">
-                </div>
-                <div class="form-group">
-                    <label for="editPresentStudents">Present Students</label>
-                    <input type="number" id="editPresentStudents" class="form-control" min="0" max="100" value="${record.present}">
-                </div>
-            </div>
-            
-            <div class="form-group">
-                <label for="editAttendanceNotes">Notes</label>
-                <textarea id="editAttendanceNotes" class="form-control" rows="3">${record.notes || ''}</textarea>
-            </div>
-            
-            <div class="form-group" style="display: flex; gap: 10px; margin-top: 30px;">
-                <button type="button" class="btn btn-secondary" onclick="updateAttendance('${attendanceId}')">
-                    <i class="fas fa-save"></i> Update Attendance
-                </button>
-                <button type="button" class="btn" onclick="closeModal()" style="background-color: #95a5a6;">
-                    <i class="fas fa-times"></i> Cancel
-                </button>
-            </div>
-        </form>
-    `;
-    
-    showModal('Edit Attendance', formContent);
-}
-
-function updateAttendance(attendanceId) {
-    const recordIndex = AppState.attendance.findIndex(a => a.id === attendanceId);
-    if (recordIndex === -1) return;
-    
-    const totalStudents = parseInt(document.getElementById('editTotalStudents').value) || 0;
-    const presentStudents = parseInt(document.getElementById('editPresentStudents').value) || 0;
-    const absentStudents = totalStudents - presentStudents;
-    const percentage = totalStudents > 0 ? ((presentStudents / totalStudents) * 100).toFixed(1) + '%' : '0%';
-    
-    AppState.attendance[recordIndex] = {
-        ...AppState.attendance[recordIndex],
-        date: document.getElementById('editAttendanceDate').value,
-        totalStudents: totalStudents,
-        present: presentStudents,
-        absent: absentStudents,
-        percentage: percentage,
-        notes: document.getElementById('editAttendanceNotes').value
-    };
-    
-    closeModal();
-    showToast('Attendance updated successfully!');
-    navigateTo('attendance');
-}
-
-function viewAttendanceDetails(attendanceId) {
-    const record = AppState.attendance.find(a => a.id === attendanceId);
-    if (!record) return;
-    
-    const course = AppState.courses.find(c => c.code === record.course);
-    const courseName = course ? course.name : record.course;
-    
-    const content = `
-        <div style="padding: 20px;">
-            <h3 style="color: #2c3e50; margin-bottom: 20px;">Attendance Record</h3>
-            <div class="form-row">
-                <div class="form-group">
-                    <label>Date</label>
-                    <div class="form-control" style="background-color: #f8f9fa;">${record.date}</div>
-                </div>
-                <div class="form-group">
-                    <label>Course</label>
-                    <div class="form-control" style="background-color: #f8f9fa;">${courseName}</div>
-                </div>
-            </div>
-            
-            <div class="form-row">
-                <div class="form-group">
-                    <label>Total Students</label>
-                    <div class="form-control" style="background-color: #f8f9fa;">${record.totalStudents}</div>
-                </div>
-                <div class="form-group">
-                    <label>Present</label>
-                    <div class="form-control" style="background-color: #f8f9fa;">${record.present}</div>
-                </div>
-                <div class="form-group">
-                    <label>Absent</label>
-                    <div class="form-control" style="background-color: #f8f9fa;">${record.absent}</div>
-                </div>
-            </div>
-            
-            <div class="form-row">
-                <div class="form-group">
-                    <label>Attendance Percentage</label>
-                    <div class="form-control" style="background-color: #f8f9fa; font-weight: bold;">${record.percentage}</div>
-                </div>
-            </div>
-            
-            <div class="form-group">
-                <label>Notes</label>
-                <div class="form-control" style="background-color: #f8f9fa; min-height: 60px;">${record.notes || 'No notes'}</div>
-            </div>
-            
-            <div style="margin-top: 30px; text-align: center;">
-                <button class="btn" onclick="editAttendance('${attendanceId}')">
-                    <i class="fas fa-edit"></i> Edit Attendance
-                </button>
-            </div>
-        </div>
-    `;
-    
-    showModal('Attendance Details', content);
-}
-
-// Announcement Functions
-function showAddAnnouncementForm() {
-    const formContent = `
-        <form id="addAnnouncementForm">
-            <div class="form-group">
-                <label for="announcementTitle">Title *</label>
-                <input type="text" id="announcementTitle" class="form-control" required>
-            </div>
-            
-            <div class="form-group">
-                <label for="announcementContent">Content *</label>
-                <textarea id="announcementContent" class="form-control" rows="6" required></textarea>
-            </div>
-            
-            <div class="form-group">
-                <label for="announcementDate">Date</label>
-                <input type="date" id="announcementDate" class="form-control" value="${new Date().toISOString().split('T')[0]}">
-            </div>
-            
-            <div class="form-group" style="display: flex; gap: 10px; margin-top: 30px;">
-                <button type="button" class="btn btn-secondary" onclick="saveAnnouncement()">
-                    <i class="fas fa-save"></i> Publish Announcement
-                </button>
-                <button type="button" class="btn" onclick="closeModal()" style="background-color: #95a5a6;">
-                    <i class="fas fa-times"></i> Cancel
-                </button>
-            </div>
-        </form>
-    `;
-    
-    showModal('Create Announcement', formContent);
-}
-
-function saveAnnouncement() {
-    const title = document.getElementById('announcementTitle').value;
-    const content = document.getElementById('announcementContent').value;
-    
-    if (!title || !content) {
-        showToast('Please fill in all required fields', 'error');
-        return;
-    }
-    
-    // Generate new announcement ID
-    const newId = 'AN' + String(AppState.announcements.length + 1).padStart(3, '0');
-    
-    // Add new announcement at the beginning
-    AppState.announcements.unshift({
-        id: newId,
-        title,
-        content,
-        date: document.getElementById('announcementDate').value || new Date().toISOString().split('T')[0]
-    });
-    
-    closeModal();
-    showToast('Announcement published successfully!');
-    navigateTo('announcements');
-}
-
-function editAnnouncement(announcementId) {
-    const announcement = AppState.announcements.find(a => a.id === announcementId);
-    if (!announcement) return;
-    
-    const formContent = `
-        <form id="editAnnouncementForm">
-            <div class="form-group">
-                <label for="editAnnouncementTitle">Title *</label>
-                <input type="text" id="editAnnouncementTitle" class="form-control" value="${announcement.title}" required>
-            </div>
-            
-            <div class="form-group">
-                <label for="editAnnouncementContent">Content *</label>
-                <textarea id="editAnnouncementContent" class="form-control" rows="6" required>${announcement.content}</textarea>
-            </div>
-            
-            <div class="form-group">
-                <label for="editAnnouncementDate">Date</label>
-                <input type="date" id="editAnnouncementDate" class="form-control" value="${announcement.date}">
-            </div>
-            
-            <div class="form-group" style="display: flex; gap: 10px; margin-top: 30px;">
-                <button type="button" class="btn btn-secondary" onclick="updateAnnouncement('${announcementId}')">
-                    <i class="fas fa-save"></i> Update Announcement
-                </button>
-                <button type="button" class="btn" onclick="closeModal()" style="background-color: #95a5a6;">
-                    <i class="fas fa-times"></i> Cancel
-                </button>
-            </div>
-        </form>
-    `;
-    
-    showModal('Edit Announcement', formContent);
-}
-
-function updateAnnouncement(announcementId) {
-    const announcementIndex = AppState.announcements.findIndex(a => a.id === announcementId);
-    if (announcementIndex === -1) return;
-    
-    AppState.announcements[announcementIndex] = {
-        ...AppState.announcements[announcementIndex],
-        title: document.getElementById('editAnnouncementTitle').value,
-        content: document.getElementById('editAnnouncementContent').value,
-        date: document.getElementById('editAnnouncementDate').value
-    };
-    
-    closeModal();
-    showToast('Announcement updated successfully!');
-    navigateTo('announcements');
-}
-
-function deleteAnnouncement(announcementId) {
-    if (confirm('Are you sure you want to delete this announcement?')) {
-        AppState.announcements = AppState.announcements.filter(a => a.id !== announcementId);
-        showToast('Announcement deleted successfully!');
-        navigateTo('announcements');
-    }
-}
-
-// Report Functions
-function generateReport() {
-    showToast('Report generation started. It will be available for download shortly.');
+function sendEmailBlast() {
+    showToast('Email blast sent to all recipients!');
 }
 
 function generateStudentReport() {
-    showToast('Student report generated successfully!');
+    generateReport('student');
 }
 
-function generateGradeReport() {
-    showToast('Grade report generated successfully!');
+function generateCourseReport() {
+    generateReport('course');
 }
 
 function generateAttendanceReport() {
-    showToast('Attendance report generated successfully!');
+    generateReport('attendance');
 }
 
-function downloadReport(reportId) {
-    const report = AppState.reports.find(r => r.id === reportId);
-    if (report) {
-        showToast(`Downloading ${report.name}...`);
+function generateFinancialReport() {
+    generateReport('financial');
+}
+
+function assignInstructors() {
+    showToast('Instructor assignment interface opened!', 'info');
+}
+
+function calculateGPA() {
+    // Calculate GPA for all students based on grades
+    const grades = getData('GRADES');
+    const students = getData('STUDENTS');
+    
+    const gpaMap = {};
+    grades.forEach(grade => {
+        if (!gpaMap[grade.studentId]) {
+            gpaMap[grade.studentId] = { total: 0, count: 0 };
+        }
+        gpaMap[grade.studentId].total += grade.total;
+        gpaMap[grade.studentId].count++;
+    });
+    
+    students.forEach((student, index) => {
+        if (gpaMap[student.id]) {
+            const avg = gpaMap[student.id].total / gpaMap[student.id].count;
+            students[index].gpa = (avg / 25).toFixed(2); // Convert to 4.0 scale
+        }
+    });
+    
+    saveData('STUDENTS', students);
+    showToast('GPAs calculated and updated for all students!');
+    loadPage('dashboard'); // Refresh to show updated GPA
+}
+
+function sendAbsenceAlerts() {
+    const today = new Date().toISOString().split('T')[0];
+    const attendance = getData('ATTENDANCE').filter(a => a.date === today && a.status !== 'present');
+    showToast(`Absence alerts sent to ${attendance.length} students/parents!`);
+}
+
+function viewStudent(studentId) {
+    const student = getData('STUDENTS').find(s => s.id === studentId);
+    if (student) {
+        document.getElementById('modalTitle').textContent = `Student: ${student.name}`;
+        document.getElementById('modalBody').innerHTML = `
+            <div style="padding: 20px;">
+                <div style="display: flex; align-items: center; gap: 20px; margin-bottom: 30px;">
+                    <div style="width: 80px; height: 80px; background: #3498db; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 2rem;">
+                        ${student.name.charAt(0)}
+                    </div>
+                    <div>
+                        <h3 style="margin: 0 0 5px 0; color: #2c3e50;">${student.name}</h3>
+                        <p style="margin: 0; color: #7f8c8d;">${student.id} • ${student.email}</p>
+                    </div>
+                </div>
+                
+                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; margin-bottom: 30px;">
+                    <div>
+                        <h4 style="color: #7f8c8d; margin-bottom: 8px;">Contact</h4>
+                        <p><strong>Phone:</strong> ${student.phone || 'N/A'}</p>
+                        <p><strong>Email:</strong> ${student.email}</p>
+                    </div>
+                    <div>
+                        <h4 style="color: #7f8c8d; margin-bottom: 8px;">Academic</h4>
+                        <p><strong>Course:</strong> ${student.course}</p>
+                        <p><strong>GPA:</strong> ${student.gpa || 'N/A'}</p>
+                    </div>
+                    <div>
+                        <h4 style="color: #7f8c8d; margin-bottom: 8px;">Status</h4>
+                        <p><strong>Enrollment:</strong> ${student.enrollmentDate || 'N/A'}</p>
+                        <p><strong>Status:</strong> <span class="status-${student.status}">${student.status.charAt(0).toUpperCase() + student.status.slice(1)}</span></p>
+                    </div>
+                </div>
+                
+                <div style="text-align: center; margin-top: 30px;">
+                    <button class="btn" onclick="editStudent('${student.id}')">
+                        <i class="fas fa-edit"></i> Edit Student
+                    </button>
+                    <button class="btn btn-secondary" onclick="closeModal()" style="margin-left: 10px;">
+                        <i class="fas fa-times"></i> Close
+                    </button>
+                </div>
+            </div>
+        `;
+        document.getElementById('modal').style.display = 'block';
+    } else {
+        showToast('Student not found!', 'error');
     }
 }
 
-function generateCustomReport() {
-    const type = document.getElementById('reportType').value;
-    const format = document.getElementById('reportFormat').value;
-    const startDate = document.getElementById('startDate').value;
-    const endDate = document.getElementById('endDate').value;
-    
-    showToast(`Generating ${type} report in ${format} format for ${startDate} to ${endDate}`);
+function editStudent(studentId) {
+    showToast(`Edit student ${studentId} - Feature in development`, 'info');
 }
 
-// Initialize the application
+function deleteStudent(studentId) {
+    if (confirm(`Are you sure you want to delete student ${studentId}? This action cannot be undone.`)) {
+        const students = getData('STUDENTS').filter(s => s.id !== studentId);
+        saveData('STUDENTS', students);
+        showToast(`Student ${studentId} deleted successfully!`, 'warning');
+        loadPage('students');
+    }
+}
+
+function viewCourse(courseCode) {
+    const course = getData('COURSES').find(c => c.code === courseCode);
+    if (course) {
+        document.getElementById('modalTitle').textContent = `Course: ${course.name}`;
+        document.getElementById('modalBody').innerHTML = `
+            <div style="padding: 20px;">
+                <div style="margin-bottom: 30px;">
+                    <h3 style="margin: 0 0 5px 0; color: #2c3e50;">${course.name}</h3>
+                    <p style="margin: 0; color: #7f8c8d;">${course.code} • ${course.credits} credits</p>
+                </div>
+                
+                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; margin-bottom: 30px;">
+                    <div>
+                        <h4 style="color: #7f8c8d; margin-bottom: 8px;">Instructor</h4>
+                        <p><strong>Name:</strong> ${course.instructor}</p>
+                    </div>
+                    <div>
+                        <h4 style="color: #7f8c8d; margin-bottom: 8px;">Enrollment</h4>
+                        <p><strong>Students:</strong> ${course.students}/${course.capacity}</p>
+                        <div style="background: #e9ecef; height: 8px; border-radius: 4px; overflow: hidden; margin-top: 5px;">
+                            <div style="width: ${(course.students / course.capacity) * 100}%; background: ${(course.students / course.capacity) > 0.9 ? '#e74c3c' : '#2ecc71'}; height: 100%;"></div>
+                        </div>
+                    </div>
+                    <div>
+                        <h4 style="color: #7f8c8d; margin-bottom: 8px;">Details</h4>
+                        <p><strong>Status:</strong> <span class="status-${course.status}">${course.status.charAt(0).toUpperCase() + course.status.slice(1)}</span></p>
+                    </div>
+                </div>
+                
+                <div style="margin-bottom: 30px;">
+                    <h4 style="color: #7f8c8d; margin-bottom: 8px;">Description</h4>
+                    <p style="color: #666; line-height: 1.6;">${course.description || 'No description available.'}</p>
+                </div>
+                
+                <div style="text-align: center;">
+                    <button class="btn" onclick="editCourse('${course.code}')">
+                        <i class="fas fa-edit"></i> Edit Course
+                    </button>
+                    <button class="btn btn-secondary" onclick="closeModal()" style="margin-left: 10px;">
+                        <i class="fas fa-times"></i> Close
+                    </button>
+                </div>
+            </div>
+        `;
+        document.getElementById('modal').style.display = 'block';
+    } else {
+        showToast('Course not found!', 'error');
+    }
+}
+
+function editCourse(courseCode) {
+    showToast(`Edit course ${courseCode} - Feature in development`, 'info');
+}
+
+function deleteCourse(courseCode) {
+    if (confirm(`Are you sure you want to delete course ${courseCode}? All related grades will also be deleted.`)) {
+        // Delete course
+        const courses = getData('COURSES').filter(c => c.code !== courseCode);
+        saveData('COURSES', courses);
+        
+        // Delete related grades
+        const grades = getData('GRADES').filter(g => g.courseCode !== courseCode);
+        saveData('GRADES', grades);
+        
+        showToast(`Course ${courseCode} and related data deleted successfully!`, 'warning');
+        loadPage('courses');
+    }
+}
+
+function editGrade(studentId, courseCode) {
+    showToast(`Edit grade for ${studentId} in ${courseCode} - Feature in development`, 'info');
+}
+
+function deleteGrade(studentId, courseCode) {
+    if (confirm(`Are you sure you want to delete grade for ${studentId} in ${courseCode}?`)) {
+        const grades = getData('GRADES').filter(g => !(g.studentId === studentId && g.courseCode === courseCode));
+        saveData('GRADES', grades);
+        showToast(`Grade deleted successfully!`, 'warning');
+        loadPage('grades');
+    }
+}
+
+function closeModal() {
+    document.getElementById('modal').style.display = 'none';
+}
+
+// Update sidebar to include Analytics
 document.addEventListener('DOMContentLoaded', function() {
-    // Set up menu click handlers
-    document.querySelectorAll('.menu-links a').forEach(link => {
-        link.addEventListener('click', function(e) {
+    // Add Analytics to main menu
+    const mainMenu = document.getElementById('mainMenu');
+    if (mainMenu) {
+        const analyticsItem = document.createElement('li');
+        analyticsItem.innerHTML = '<a data-page="analytics"><i class="fas fa-chart-bar"></i> Analytics</a>';
+        mainMenu.appendChild(analyticsItem);
+        
+        // Add Settings to main menu
+        const settingsItem = document.createElement('li');
+        settingsItem.innerHTML = '<a data-page="settings"><i class="fas fa-cog"></i> Settings</a>';
+        mainMenu.appendChild(settingsItem);
+    }
+    
+    // Re-attach event listeners after adding new items
+    const menuItems = document.querySelectorAll('.menu-links a');
+    menuItems.forEach(item => {
+        item.addEventListener('click', function(e) {
             e.preventDefault();
-            const pageId = this.getAttribute('data-page');
-            if (pageId) {
-                navigateTo(pageId);
-            }
+            const page = this.getAttribute('data-page');
+            loadPage(page);
+            
+            // Update active menu item
+            menuItems.forEach(i => i.classList.remove('active'));
+            this.classList.add('active');
         });
-    });
-    
-    // Initialize with dashboard
-    navigateTo('dashboard');
-    
-    // Close modal when clicking outside
-    window.addEventListener('click', function(event) {
-        const modal = document.getElementById('modal');
-        if (event.target === modal) {
-            closeModal();
-        }
     });
 });

@@ -1,14 +1,15 @@
-// firebase.js - CDN VERSION
+// firebase.js - CORRECTED (Using v9.23.0 to match auth.js)
 // ============================================
 
-// Import from CDN instead
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-analytics.js";
-import { getAuth } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-import { getFirestore } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-import { getStorage } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
+// Import from CDN
+import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
+import { getAuth } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
+import { getFirestore } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
+import { getStorage } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-storage.js";
+import { getAnalytics } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-analytics.js";
 
-// Your web app's Firebase configuration (SAME AS BEFORE)
+// Your Firebase config
+// For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
   apiKey: "AIzaSyBS6oOnLAjBUAVTaasgzKXCMMSgNaVpbpg",
   authDomain: "studentportal-607ef.firebaseapp.com",
@@ -21,10 +22,22 @@ const firebaseConfig = {
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
-const analytics = getAnalytics(app);
 const auth = getAuth(app);
 const db = getFirestore(app);
 const storage = getStorage(app);
+const analytics = getAnalytics(app);
 
-// Export the services you need
+// Export services
 export { app, auth, db, storage, analytics };
+
+
+// Add this to the END of firebase.js (after your exports)
+
+// Make auth and db available globally for debugging
+window.firebaseAuth = auth;
+window.firebaseDb = db;
+window.firebaseApp = app;
+
+console.log("Firebase initialized. For debugging, use:");
+console.log("- window.firebaseAuth");
+console.log("- window.firebaseDb");

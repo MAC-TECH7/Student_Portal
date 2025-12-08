@@ -333,121 +333,108 @@
     </div>
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script>
-    <script>
-        // Shared data storage functions
-        function getUsers() {
-            const stored = localStorage.getItem('registrationSystem');
-            let users = stored ? JSON.parse(stored) : {};
-            
-            // ALWAYS ensure admin account exists
-            if (!users['admin@school.com']) {
-                users['admin@school.com'] = {
-                    password: 'admin123',
-                    role: 'admin',
-                    firstName: 'Admin',
-                    lastName: 'User'
-                };
-            }
-            
-            // Add demo student data if no students exist
-            if (!users['student@school.com']) {
-                users['student@school.com'] = {
-                    password: 'student123',
-                    role: 'student',
-                    firstName: 'John',
-                    lastName: 'Doe',
-                    dob: '2000-01-15',
-                    gender: 'Male',
-                    phone: '+1234567890',
-                    city: 'New York',
-                    address: '123 Main Street',
-                    program: 'Computer Science',
-                    year: '3',
-                    studentId: 'STU001'
-                };
-            }
-            
-            if (!users['alice@student.com']) {
-                users['alice@student.com'] = {
-                    password: 'pass123',
-                    role: 'student',
-                    firstName: 'Alice',
-                    lastName: 'Johnson',
-                    dob: '2001-05-20',
-                    gender: 'Female',
-                    phone: '+1987654321',
-                    city: 'Los Angeles',
-                    address: '456 Oak Avenue',
-                    program: 'Engineering',
-                    year: '2',
-                    studentId: 'STU002'
-                };
-            }
-            
-            localStorage.setItem('registrationSystem', JSON.stringify(users));
-            return users;
+   <!-- Replace the entire script section at the bottom -->
+<script type="module">
+    // Firebase-only login system
+    import { loginUser } from './auth.js';
+    
+    // Role selection functions
+    function selectRole(role) {
+        document.getElementById('roleSelection').classList.add('hidden');
+        
+        if (role === 'student') {
+            document.getElementById('studentLoginForm').classList.add('active');
+        } else if (role === 'admin') {
+            document.getElementById('adminLoginForm').classList.add('active');
         }
+    }
+    
+    function backToRoleSelection() {
+        document.getElementById('roleSelection').classList.remove('hidden');
+        document.getElementById('studentLoginForm').classList.remove('active');
+        document.getElementById('adminLoginForm').classList.remove('active');
         
-        let users = getUsers();
+        // Clear form inputs
+        document.getElementById('studentForm').reset();
+        document.getElementById('adminForm').reset();
+    }
+    
+    // Student Login Handler
+    document.getElementById('studentForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const email = document.getElementById('studentEmail').value;
+        const password = document.getElementById('studentPassword').value;
         
-        function selectRole(role) {
-            document.getElementById('roleSelection').classList.add('hidden');
-            
-            if (role === 'student') {
-                document.getElementById('studentLoginForm').classList.add('active');
-            } else if (role === 'admin') {
-                document.getElementById('adminLoginForm').classList.add('active');
-            }
-        }
+        const btn = this.querySelector('button[type="submit"]');
+        const originalText = btn.textContent;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Logging in...';
+        btn.disabled = true;
         
-        function backToRoleSelection() {
-            document.getElementById('roleSelection').classList.remove('hidden');
-            document.getElementById('studentLoginForm').classList.remove('active');
-            document.getElementById('adminLoginForm').classList.remove('active');
+        try {
+            console.log("Attempting student login...");
+            const result = await loginUser(email, password);
+            console.log("Login result:", result);
             
-            // Clear form inputs
-            document.getElementById('studentForm').reset();
-            document.getElementById('adminForm').reset();
-        }
-        
-        // Student Login Handler
-        document.getElementById('studentForm').addEventListener('submit', function(e) {
-            e.preventDefault();
-            const email = document.getElementById('studentEmail').value;
-            const password = document.getElementById('studentPassword').value;
-            
-            // Refresh users data from storage before checking
-            users = getUsers();
-            
-            if (users[email] && users[email].password === password && users[email].role === 'student') {
-                // Store session
-                sessionStorage.setItem('currentUser', JSON.stringify({ email: email, ...users[email] }));
-                // Redirect to student portal
+            if (result.success && result.role === 'student') {
+                console.log("✅ Student login successful, redirecting...");
                 window.location.href = 'student.html';
+            } else if (result.success && result.role !== 'student') {
+                alert('This account is not a student account!');
+                btn.textContent = originalText;
+                btn.disabled = false;
             } else {
-                alert('Invalid student credentials! Please check your email and password.');
+                alert('Login failed: ' + result.message);
+                btn.textContent = originalText;
+                btn.disabled = false;
             }
-        });
+        } catch (error) {
+            console.error("Login error:", error);
+            alert('Login error: ' + error.message);
+            btn.textContent = originalText;
+            btn.disabled = false;
+        }
+    });
+    
+    // Admin Login Handler
+    document.getElementById('adminForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const email = document.getElementById('adminEmail').value;
+        const password = document.getElementById('adminPassword').value;
         
-        // Admin Login Handler
-        document.getElementById('adminForm').addEventListener('submit', function(e) {
-            e.preventDefault();
-            const email = document.getElementById('adminEmail').value;
-            const password = document.getElementById('adminPassword').value;
+        const btn = this.querySelector('button[type="submit"]');
+        const originalText = btn.textContent;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Logging in...';
+        btn.disabled = true;
+        
+        try {
+            console.log("Attempting admin login...");
+            const result = await loginUser(email, password);
+            console.log("Login result:", result);
             
-            // Refresh users data from storage before checking
-            users = getUsers();
-            
-            if (users[email] && users[email].password === password && users[email].role === 'admin') {
-                // Store session
-                sessionStorage.setItem('currentUser', JSON.stringify({ email: email, ...users[email] }));
-                // Redirect to admin portal
+            if (result.success && result.role === 'admin') {
+                console.log("✅ Admin login successful, redirecting...");
                 window.location.href = 'admin.html';
+            } else if (result.success && result.role !== 'admin') {
+                alert('This account is not an admin account!');
+                btn.textContent = originalText;
+                btn.disabled = false;
             } else {
-                alert('Invalid admin credentials! Access denied.');
+                alert('Login failed: ' + result.message);
+                btn.textContent = originalText;
+                btn.disabled = false;
             }
-        });
-    </script>
+        } catch (error) {
+            console.error("Login error:", error);
+            alert('Login error: ' + error.message);
+            btn.textContent = originalText;
+            btn.disabled = false;
+        }
+    });
+    
+    // Make functions available globally
+    window.selectRole = selectRole;
+    window.backToRoleSelection = backToRoleSelection;
+</script>
     <script type="module" src="firebase.js"></script>
 <script type="module" src="auth.js"></script>
 

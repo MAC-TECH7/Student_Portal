@@ -5,6 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Student Management System - Admin Dashboard</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Add this line after the Font Awesome link -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<!-- Add Chart.js library -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         * {
             margin: 0;
@@ -37,6 +41,7 @@
             padding: 0 20px 20px;
             border-bottom: 1px solid #34495e;
             margin-bottom: 20px;
+            cursor: pointer;
         }
 
         .logo h1 {
@@ -44,7 +49,6 @@
             display: flex;
             align-items: center;
             gap: 10px;
-            cursor: pointer;
         }
 
         .logo i {
@@ -130,7 +134,7 @@
         .user-info {
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 15px;
             background-color: white;
             padding: 10px 20px;
             border-radius: 50px;
@@ -644,13 +648,40 @@
                 margin: 10% auto;
             }
         }
+
+        /* Logout button styles */
+        .logout-btn {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.3s;
+        }
+
+        .logout-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(255, 107, 107, 0.4);
+        }
+
+        /* Loading Spinner */
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <!-- Sidebar -->
         <aside class="sidebar">
-            <div class="logo" onclick="navigateTo('dashboard')">
+            <div class="logo" onclick="loadPage('dashboard')">
                 <h1><i class="fas fa-graduation-cap"></i> EduAdmin</h1>
             </div>
             
@@ -661,7 +692,8 @@
             <div class="menu-section">
                 <h3>Management</h3>
                 <ul class="menu-links" id="mainMenu">
-                    <li><a data-page="students" class="active"><i class="fas fa-users"></i> Manage Students</a></li>
+                    <li><a data-page="dashboard" class="active"><i class="fas fa-tachometer-alt"></i> Dashboard</a></li>
+                    <li><a data-page="students"><i class="fas fa-users"></i> Manage Students</a></li>
                     <li><a data-page="courses"><i class="fas fa-book-open"></i> Manage Courses</a></li>
                     <li><a data-page="grades"><i class="fas fa-chart-bar"></i> Manage Grades</a></li>
                     <li><a data-page="attendance"><i class="fas fa-calendar-check"></i> Attendance</a></li>
@@ -677,8 +709,6 @@
                     <li><a data-page="courses-dashboard"><i class="fas fa-book"></i> Courses</a></li>
                     <li><a data-page="grades-dashboard"><i class="fas fa-chart-line"></i> Grades</a></li>
                     <li><a data-page="attendance-dashboard"><i class="fas fa-clipboard-list"></i> Attendance</a></li>
-                    <li><a data-page="announcements-dashboard"><i class="fas fa-newspaper"></i> Announcements</a></li>
-                    <li><a data-page="reports-dashboard"><i class="fas fa-chart-pie"></i> Reports</a></li>
                 </ul>
             </div>
         </aside>
@@ -691,14 +721,17 @@
                     <i class="fas fa-user-circle fa-2x"></i>
                     <div>
                         <div><strong id="adminNameHeader">Administrator</strong></div>
-                        <div style="font-size: 0.8rem; color: #7f8c8d;" id="adminEmail">admin@edumanage.edu</div>
+                        <div style="font-size: 0.8rem; color: #7f8c8d;">admin@edumanage.edu</div>
                     </div>
+                    <button class="logout-btn" onclick="logout()">
+                        <i class="fas fa-sign-out-alt"></i> Logout
+                    </button>
                 </div>
             </div>
 
-            <!-- All page content will be dynamically loaded here -->
+            <!-- Page content will be loaded here -->
             <div id="pageContent">
-                <!-- Content will be loaded via JavaScript -->
+                <!-- Dashboard will load here -->
             </div>
         </main>
     </div>
@@ -721,7 +754,7 @@
         <span id="toastMessage">Action completed successfully!</span>
     </div>
 
-    
+    <!-- Link to external JavaScript file -->
+    <script src="admin.js"></script>
 </body>
-<script type="module" src="admin.js"></script>
 </html>
