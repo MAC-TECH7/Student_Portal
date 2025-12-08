@@ -1,3 +1,118 @@
+// admin.js - Add these imports at the TOP of the file
+import { 
+    getAuth, 
+    onAuthStateChanged, 
+    signOut 
+} from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
+
+import { 
+    getFirestore, 
+    doc, 
+    getDoc
+} from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
+
+import { app } from "./firebase.js";
+
+// Initialize services
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+// Add authentication check at the start
+document.addEventListener('DOMContentLoaded', function() {
+    checkAdminAuth();
+});
+
+async function checkAdminAuth() {
+    onAuthStateChanged(auth, async (user) => {
+        if (!user) {
+            window.location.href = "login.html";
+            return;
+        }
+        
+        try {
+            // Get user document from Firestore
+            const userDoc = await getDoc(doc(db, "users", user.uid));
+            
+            if (!userDoc.exists()) {
+                window.location.href = "login.html";
+                return;
+            }
+            
+            const userData = userDoc.data();
+            
+            // Check if admin
+            if (userData.role !== "admin") {
+                alert("Access denied. Admins only.");
+                window.location.href = "student.html";
+                return;
+            }
+            
+            // Update admin name in the UI
+            updateAdminUI(userData);
+            
+            // Initialize your existing admin dashboard
+            initializeAdminDashboard();
+            
+        } catch (error) {
+            console.error("Admin auth error:", error);
+            window.location.href = "login.html";
+        }
+    });
+}
+
+function updateAdminUI(userData) {
+    const adminName = document.getElementById('adminName');
+    const adminNameHeader = document.getElementById('adminNameHeader');
+    const adminEmail = document.getElementById('adminEmail');
+    
+    if (adminName) adminName.textContent = userData.name || 'Administrator';
+    if (adminNameHeader) adminNameHeader.textContent = userData.name || 'Administrator';
+    if (adminEmail) adminEmail.textContent = userData.email || 'admin@school.com';
+}
+
+function initializeAdminDashboard() {
+    // Your existing initialization code from admin.js
+    // Set up menu click handlers
+    document.querySelectorAll('.menu-links a').forEach(link => {
+        link.addEventListener('click', function(e) {
+            e.preventDefault();
+            const pageId = this.getAttribute('data-page');
+            if (pageId) {
+                navigateTo(pageId);
+            }
+        });
+    });
+    
+    // Initialize with dashboard
+    navigateTo('dashboard');
+    
+    // Close modal when clicking outside
+    window.addEventListener('click', function(event) {
+        const modal = document.getElementById('modal');
+        if (event.target === modal) {
+            closeModal();
+        }
+    });
+    
+    // Add logout functionality
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('.logout-btn')) {
+            logoutAdmin();
+        }
+    });
+}
+
+async function logoutAdmin() {
+    try {
+        await signOut(auth);
+        window.location.href = "login.html";
+    } catch (error) {
+        console.error("Logout error:", error);
+        alert("Error logging out. Please try again.");
+    }
+}
+
+
 // admin.js - Complete Admin Dashboard Functionality
 
 // Main Application State
