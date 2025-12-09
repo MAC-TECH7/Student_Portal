@@ -1,76 +1,34 @@
-// student.js - CORRECTED VERSION
-// ============================================
+// student.js - Complete Student Dashboard with all functionality
+console.log("student.js loaded successfully!");
 
-// Import the auth function
-import { onUserStateChanged } from './auth.js';
-import { db } from './firebase.js';
+// Global variables
+let currentUserData = null;
+let selectedFormat = 'pdf';
 
-// Check if user is logged in
-onUserStateChanged(async (user) => {
-    console.log("Auth state changed. User:", user ? user.email : "No user");
+document.addEventListener('DOMContentLoaded', function() {
+    console.log("DOM loaded, initializing student dashboard...");
     
-    if (!user) {
-        console.log("No user found, redirecting to login...");
+    // Get user data from localStorage
+    const userStr = localStorage.getItem('currentUser');
+    const isLoggedIn = localStorage.getItem('isLoggedIn');
+    
+    if (!userStr || isLoggedIn !== 'true') {
+        console.log("Not authenticated, redirecting to login...");
         window.location.href = 'login.html';
         return;
     }
     
-    console.log('Student logged in:', user.email);
-    // Check if user is student
-    await checkStudentRole(user.uid);
-});
-
-async function checkStudentRole(uid) {
-    try {
-        console.log("Checking role for UID:", uid);
-        
-        // Update loading status
-        const loadingStatus = document.getElementById('loadingStatus');
-        if (loadingStatus) {
-            loadingStatus.textContent = 'Loading your data...';
-        }
-        
-        // Import Firestore functions
-        const { doc, getDoc } = await import('https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js');
-        
-        const snap = await getDoc(doc(db, "users", uid));
-        
-        if (!snap.exists()) {
-            console.log("User document not found");
-            alert('User profile not found. Please contact administrator.');
-            window.location.href = 'login.html';
-            return;
-        }
-        
-        const userData = snap.data();
-        console.log("User data loaded:", userData);
-        
-        if (userData.role !== 'student') {
-            console.log("User is not student, redirecting...");
-            alert('Access denied! Students only.');
-            window.location.href = 'login.html';
-        } else {
-            console.log('Student logged in:', userData.email);
-            // Show dashboard and load data
-            showDashboard(userData);
-            await loadStudentData(uid, userData);
-        }
-    } catch (error) {
-        console.error('Error checking role:', error);
-        alert('Error loading dashboard: ' + error.message);
-        window.location.href = 'login.html';
-    }
-}
-
-function showDashboard(userData) {
-    console.log("Showing dashboard...");
+    currentUserData = JSON.parse(userStr);
+    const userRole = currentUserData.role;
+    
+    console.log("User authenticated:", currentUserData.email, "Role:", userRole);
     
     // Hide loading screen
     const loadingScreen = document.getElementById('loadingScreen');
     const studentDashboard = document.getElementById('studentDashboard');
     
     if (loadingScreen) {
-        loadingScreen.classList.add('hidden');
+        loadingScreen.style.display = 'none';
         console.log("Loading screen hidden");
     }
     
@@ -79,282 +37,645 @@ function showDashboard(userData) {
         console.log("Dashboard shown");
     }
     
-    // Update student name
-    if (userData && document.getElementById('studentName')) {
-        document.getElementById('studentName').textContent = userData.name || userData.email;
-        console.log("Student name updated:", userData.name || userData.email);
+    // Update user name in header
+    if (currentUserData && document.getElementById('studentName')) {
+        const name = currentUserData.name || currentUserData.email || 'Student';
+        document.getElementById('studentName').textContent = name;
+        console.log("Student name updated:", name);
     }
-}
-
-async function loadStudentData(uid, userData) {
-    console.log("Loading data for student:", uid);
     
-    try {
-        // Load all data
-        await Promise.all([
-            loadOverview(uid),
-            loadCourses(uid),
-            loadGrades(uid),
-            loadAttendance(uid),
-            loadProfile(userData)
-        ]);
-        
-        console.log("All data loaded successfully");
-    } catch (error) {
-        console.error("Error loading student data:", error);
-    }
-}
-
-// === DASHBOARD FUNCTIONS ===
-async function loadOverview(uid) {
-    try {
-        console.log("Loading overview...");
-        
-        // Update stats
-        if (document.getElementById('enrolledCoursesCount')) {
-            document.getElementById('enrolledCoursesCount').textContent = '4';
-        }
-        if (document.getElementById('averageGrade')) {
-            document.getElementById('averageGrade').textContent = '3.8';
-        }
-        if (document.getElementById('attendanceRate')) {
-            document.getElementById('attendanceRate').textContent = '95%';
-        }
-        
-        // Load announcements
-        await loadAnnouncements();
-        
-    } catch (error) {
-        console.error("Error loading overview:", error);
-    }
-}
-
-async function loadAnnouncements() {
-    try {
-        const container = document.getElementById('recentAnnouncements');
-        if (!container) return;
-        
-        // Clear spinner
-        container.innerHTML = '';
-        
-        // Add sample announcements
-        const announcements = [
-            {
-                title: 'Midterm Exams Schedule',
-                message: 'Midterm exams will be held from March 15-20. Please check your schedule.',
-                date: '2024-03-01',
-                priority: 'high'
-            },
-            {
-                title: 'Library Hours Extended',
-                message: 'Library will be open until 10 PM during exam season.',
-                date: '2024-02-28',
-                priority: 'medium'
-            }
-        ];
-        
-        announcements.forEach(ann => {
-            const div = document.createElement('div');
-            div.className = 'announcement-item';
-            div.innerHTML = `
-                <h5><i class="fas fa-bell ${ann.priority === 'high' ? 'text-danger' : 'text-warning'} me-2"></i>${ann.title}</h5>
-                <p>${ann.message}</p>
-                <small><i class="far fa-calendar me-1"></i>${ann.date}</small>
-            `;
-            container.appendChild(div);
+    // Initialize Bootstrap tabs
+    const tabTriggers = [].slice.call(document.querySelectorAll('#dashboardTabs button[data-bs-toggle="tab"]'));
+    tabTriggers.forEach(function (triggerEl) {
+        triggerEl.addEventListener('click', function (e) {
+            e.preventDefault();
+            const target = this.getAttribute('data-bs-target');
+            const tabId = target.replace('#', '');
+            loadTabContent(tabId);
         });
-        
-    } catch (error) {
-        console.error("Error loading announcements:", error);
+    });
+    
+    // Load initial tab content
+    loadTabContent('overview');
+    
+    // Setup modal close buttons
+    setupModalButtons();
+    
+    // Pre-fill edit profile form
+    prefillEditForm();
+});
+
+function loadTabContent(tabId) {
+    console.log("Loading tab:", tabId);
+    
+    const tabContent = document.getElementById(tabId);
+    if (!tabContent) return;
+    
+    // Show loading state
+    tabContent.innerHTML = `
+        <div class="spinner-container">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+    `;
+    
+    // Load content based on tab
+    setTimeout(() => {
+        switch(tabId) {
+            case 'overview':
+                loadOverviewTab();
+                break;
+            case 'courses':
+                loadCoursesTab();
+                break;
+            case 'grades':
+                loadGradesTab();
+                break;
+            case 'attendance':
+                loadAttendanceTab();
+                break;
+            case 'profile':
+                loadProfileTab();
+                break;
+            default:
+                loadOverviewTab();
+        }
+    }, 300);
+}
+
+function loadOverviewTab() {
+    const tabContent = document.getElementById('overview');
+    if (!tabContent) return;
+    
+    // Sample data
+    const enrolledCourses = 5;
+    const averageGrade = 3.65;
+    const attendanceRate = '96.7%';
+    
+    // Update statistics
+    const enrolledCoursesCount = document.getElementById('enrolledCoursesCount');
+    const averageGradeEl = document.getElementById('averageGrade');
+    const attendanceRateEl = document.getElementById('attendanceRate');
+    
+    if (enrolledCoursesCount) enrolledCoursesCount.textContent = enrolledCourses;
+    if (averageGradeEl) averageGradeEl.textContent = averageGrade;
+    if (attendanceRateEl) attendanceRateEl.textContent = attendanceRate;
+    
+    // Recent announcements
+    const recentAnnouncements = document.getElementById('recentAnnouncements');
+    if (recentAnnouncements) {
+        recentAnnouncements.innerHTML = `
+            <div class="announcement-item">
+                <h5>Midterm Exams Schedule</h5>
+                <p>Midterm exams begin next Monday. Please check your exam schedule on the notice board.</p>
+                <small><i class="far fa-calendar me-1"></i>Posted: March 10, 2024</small>
+            </div>
+            <div class="announcement-item">
+                <h5>Library Maintenance</h5>
+                <p>Main library will be closed this Saturday for maintenance. Please plan your studies accordingly.</p>
+                <small><i class="far fa-calendar me-1"></i>Posted: March 8, 2024</small>
+            </div>
+            <div class="announcement-item">
+                <h5>Career Counseling Session</h5>
+                <p>Career counseling session will be held next Wednesday at 2 PM in the auditorium.</p>
+                <small><i class="far fa-calendar me-1"></i>Posted: March 12, 2024</small>
+            </div>
+        `;
     }
 }
 
-function loadProfile(userData) {
-    try {
-        const container = document.getElementById('profileDisplay');
-        if (!container) return;
+function loadCoursesTab() {
+    const tabContent = document.getElementById('enrolledCoursesList');
+    if (!tabContent) return;
+    
+    // Sample course data
+    const courses = [
+        { code: 'CS101', name: 'Introduction to Programming', instructor: 'Dr. Smith', credits: 3, progress: 65, status: 'In Progress' },
+        { code: 'MATH201', name: 'Calculus II', instructor: 'Prof. Johnson', credits: 4, progress: 42, status: 'In Progress' },
+        { code: 'ENG102', name: 'English Composition', instructor: 'Dr. Williams', credits: 3, progress: 85, status: 'In Progress' },
+        { code: 'PHY101', name: 'Physics I', instructor: 'Prof. Brown', credits: 4, progress: 30, status: 'In Progress' },
+        { code: 'BUS201', name: 'Business Management', instructor: 'Prof. Davis', credits: 3, progress: 90, status: 'Completed' }
+    ];
+    
+    tabContent.innerHTML = `
+        <div class="course-list">
+            ${courses.map(course => `
+                <div class="course-card ${course.status === 'Completed' ? 'enrolled' : ''}">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <div>
+                            <h4 class="text-gradient">${course.code} - ${course.name}</h4>
+                            <p class="mb-1"><i class="fas fa-chalkboard-teacher me-2"></i>${course.instructor}</p>
+                            <p class="mb-2"><i class="fas fa-star me-2"></i>${course.credits} Credits</p>
+                        </div>
+                        <span class="badge ${course.status === 'Completed' ? 'bg-success' : 'bg-primary'}">${course.status}</span>
+                    </div>
+                    
+                    <div class="progress mb-2" style="height: 10px;">
+                        <div class="progress-bar" role="progressbar" style="width: ${course.progress}%" 
+                             aria-valuenow="${course.progress}" aria-valuemin="0" aria-valuemax="100">
+                        </div>
+                    </div>
+                    
+                    <div class="d-flex justify-content-between align-items-center">
+                        <small class="text-muted">Progress: ${course.progress}% complete</small>
+                        <button class="btn btn-sm btn-outline-primary" onclick="viewCourseDetails('${course.code}')">
+                            <i class="fas fa-info-circle me-1"></i>View Details
+                        </button>
+                    </div>
+                </div>
+            `).join('')}
+        </div>
         
-        // Clear spinner
-        container.innerHTML = '';
+        <div class="mt-4">
+            <button class="btn btn-primary" onclick="showModal('Enroll in Course', 'Browse and enroll in available courses')">
+                <i class="fas fa-plus-circle me-2"></i>Enroll in New Course
+            </button>
+        </div>
+    `;
+}
+
+function loadGradesTab() {
+    const tabContent = document.getElementById('gradesContent');
+    if (!tabContent) return;
+    
+    // Sample grades data
+    const grades = [
+        { course: 'CS101 - Programming', assignment: 'Midterm Exam', score: 92, grade: 'A', date: '2024-03-01' },
+        { course: 'CS101 - Programming', assignment: 'Assignment 3', score: 85, grade: 'B', date: '2024-02-25' },
+        { course: 'MATH201 - Calculus II', assignment: 'Quiz 2', score: 88, grade: 'B+', date: '2024-03-03' },
+        { course: 'ENG102 - English', assignment: 'Research Paper', score: 95, grade: 'A', date: '2024-02-28' },
+        { course: 'PHY101 - Physics I', assignment: 'Lab Report 1', score: 78, grade: 'C+', date: '2024-02-20' }
+    ];
+    
+    tabContent.innerHTML = `
+        <div class="row">
+            <div class="col-md-8">
+                <h4 class="mb-4">Recent Grades</h4>
+                <div class="grade-list">
+                    ${grades.map(grade => `
+                        <div class="grade-item">
+                            <div>
+                                <h5 class="mb-1">${grade.assignment}</h5>
+                                <p class="text-muted mb-0">${grade.course}</p>
+                                <small class="text-muted">${formatDate(new Date(grade.date))}</small>
+                            </div>
+                            <div class="text-end">
+                                <div class="score-display">
+                                    <span class="badge ${getGradeColor(grade.grade)} p-2" style="font-size: 1.2rem;">
+                                        ${grade.grade}
+                                    </span>
+                                    <div class="mt-1">
+                                        <strong>${grade.score}%</strong>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+            
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title"><i class="fas fa-chart-pie me-2"></i>Grade Summary</h5>
+                        <div class="mt-3">
+                            <p><strong>Current GPA:</strong> <span class="float-end">3.65</span></p>
+                            <p><strong>Total Credits:</strong> <span class="float-end">15</span></p>
+                            <p><strong>Credits Completed:</strong> <span class="float-end">9</span></p>
+                            <hr>
+                            <p><strong>Grade Distribution:</strong></p>
+                            <p>A: <span class="float-end">2 courses</span></p>
+                            <p>B: <span class="float-end">2 courses</span></p>
+                            <p>C: <span class="float-end">1 course</span></p>
+                        </div>
+                        <button class="btn btn-outline-primary w-100 mt-3" onclick="showModal('View All Grades', 'View complete grade history and transcript')">
+                            <i class="fas fa-file-alt me-2"></i>View Transcript
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function loadAttendanceTab() {
+    const tabContent = document.getElementById('attendanceContent');
+    if (!tabContent) return;
+    
+    // Sample attendance data
+    const attendanceData = {
+        overall: '96.7%',
+        courses: [
+            { name: 'CS101 - Programming', present: 28, total: 30, rate: '93.3%' },
+            { name: 'MATH201 - Calculus', present: 29, total: 30, rate: '96.7%' },
+            { name: 'ENG102 - English', present: 30, total: 30, rate: '100%' },
+            { name: 'PHY101 - Physics', present: 27, total: 30, rate: '90%' },
+            { name: 'BUS201 - Business', present: 29, total: 30, rate: '96.7%' }
+        ]
+    };
+    
+    tabContent.innerHTML = `
+        <div class="row">
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-body text-center">
+                        <h3 class="text-gradient">${attendanceData.overall}</h3>
+                        <p class="text-muted">Overall Attendance Rate</p>
+                        <div class="mt-3">
+                            <div class="progress" style="height: 20px;">
+                                <div class="progress-bar bg-success" role="progressbar" 
+                                     style="width: ${parseFloat(attendanceData.overall)}%" 
+                                     aria-valuenow="${parseFloat(attendanceData.overall)}" 
+                                     aria-valuemin="0" aria-valuemax="100">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-8">
+                <h4 class="mb-4">Attendance by Course</h4>
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Course</th>
+                                <th>Present</th>
+                                <th>Total</th>
+                                <th>Rate</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${attendanceData.courses.map(course => `
+                                <tr>
+                                    <td>${course.name}</td>
+                                    <td>${course.present}</td>
+                                    <td>${course.total}</td>
+                                    <td>${course.rate}</td>
+                                    <td>
+                                        <span class="badge ${parseFloat(course.rate) >= 90 ? 'bg-success' : 'bg-warning'}">
+                                            ${parseFloat(course.rate) >= 90 ? 'Good' : 'Needs Improvement'}
+                                        </span>
+                                    </td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
         
-        const profileHTML = `
+        <div class="alert alert-info mt-4">
+            <i class="fas fa-info-circle me-2"></i>
+            <strong>Note:</strong> Attendance is calculated based on class participation. Contact your instructor if there are any discrepancies.
+        </div>
+    `;
+}
+
+function loadProfileTab() {
+    const tabContent = document.getElementById('profileDisplay');
+    if (!tabContent) return;
+    
+    tabContent.innerHTML = `
+        <div class="profile-display">
             <div class="profile-field">
                 <strong>Full Name</strong>
-                <p>${userData.name || 'Demo Student'}</p>
+                <p>${currentUserData.name || 'John Doe'}</p>
             </div>
-            <div class="profile-field">
-                <strong>Email Address</strong>
-                <p>${userData.email || 'student@school.com'}</p>
-            </div>
+            
             <div class="profile-field">
                 <strong>Student ID</strong>
-                <p>${userData.studentId || 'STU001'}</p>
+                <p>${currentUserData.studentId || 'STU2024001'}</p>
             </div>
+            
             <div class="profile-field">
-                <strong>Role</strong>
-                <p>${userData.role || 'student'}</p>
+                <strong>Email Address</strong>
+                <p>${currentUserData.email || 'student@school.com'}</p>
             </div>
+            
             <div class="profile-field">
-                <strong>Account Status</strong>
-                <p><span class="badge bg-success">Active</span></p>
+                <strong>Program</strong>
+                <p>${currentUserData.program || 'Computer Science'}</p>
             </div>
-        `;
+            
+            <div class="profile-field">
+                <strong>Year</strong>
+                <p>${currentUserData.year || '2nd Year'}</p>
+            </div>
+            
+            <div class="profile-field">
+                <strong>Enrollment Date</strong>
+                <p>${formatDate(new Date('2023-09-01'))}</p>
+            </div>
+        </div>
         
-        container.innerHTML = profileHTML;
-        
-    } catch (error) {
-        console.error("Error loading profile:", error);
-    }
+        <!-- Profile Actions Section -->
+        <div class="profile-actions-section mt-4">
+            <h5><i class="fas fa-cogs me-2"></i>Profile Actions</h5>
+            <div class="profile-actions-grid">
+                <button class="profile-action-btn" onclick="openEditProfileModal()">
+                    <i class="fas fa-user-edit"></i>
+                    <span>Edit Profile</span>
+                    <small>Update your personal information</small>
+                </button>
+                <button class="profile-action-btn" onclick="openChangePasswordModal()">
+                    <i class="fas fa-key"></i>
+                    <span>Change Password</span>
+                    <small>Update your login password</small>
+                </button>
+                <button class="profile-action-btn" onclick="openDownloadProfileModal()">
+                    <i class="fas fa-download"></i>
+                    <span>Download Profile</span>
+                    <small>Export your profile data</small>
+                </button>
+            </div>
+        </div>
+    `;
 }
 
-async function loadCourses(uid) {
-    try {
-        const container = document.getElementById('enrolledCoursesList');
-        if (!container) return;
-        
-        // Clear spinner
-        container.innerHTML = '';
-        
-        // Sample courses data
-        const courses = [
-            { code: 'CS101', name: 'Introduction to Programming', instructor: 'Dr. Smith', credits: 3 },
-            { code: 'MATH201', name: 'Calculus II', instructor: 'Prof. Johnson', credits: 4 },
-            { code: 'ENG102', name: 'English Composition', instructor: 'Dr. Williams', credits: 3 },
-            { code: 'PHYS150', name: 'Physics Fundamentals', instructor: 'Prof. Brown', credits: 4 }
-        ];
-        
-        courses.forEach(course => {
-            const div = document.createElement('div');
-            div.className = 'course-card enrolled';
-            div.innerHTML = `
-                <div class="d-flex justify-content-between align-items-start mb-2">
-                    <h5 class="mb-0">${course.code}: ${course.name}</h5>
-                    <span class="badge bg-primary">${course.credits} Credits</span>
-                </div>
-                <p class="text-muted mb-2"><i class="fas fa-chalkboard-teacher me-1"></i>${course.instructor}</p>
-                <div class="d-flex justify-content-between align-items-center">
-                    <span class="fw-bold">Status: Enrolled</span>
-                    <button class="btn btn-sm btn-outline-primary">View Details</button>
-                </div>
-            `;
-            container.appendChild(div);
+// Utility Functions
+function formatDate(date) {
+    return date.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+    });
+}
+
+function getGradeColor(grade) {
+    if (grade.includes('A')) return 'bg-success';
+    if (grade.includes('B')) return 'bg-info';
+    if (grade.includes('C')) return 'bg-warning';
+    return 'bg-danger';
+}
+
+function viewCourseDetails(courseCode) {
+    showModal(`Course Details: ${courseCode}`, `Viewing details for ${courseCode}. This feature will show complete course information, syllabus, and materials.`);
+}
+
+function openEditProfileModal() {
+    const modal = document.getElementById('editProfileModal');
+    if (modal) modal.classList.add('active');
+}
+
+function openChangePasswordModal() {
+    const modal = document.getElementById('changePasswordModal');
+    if (modal) modal.classList.add('active');
+}
+
+function openDownloadProfileModal() {
+    const modal = document.getElementById('downloadProfileModal');
+    if (modal) modal.classList.add('active');
+}
+
+function showModal(title, message) {
+    const modalTitle = document.getElementById('modalTitle');
+    const modalMessage = document.getElementById('modalMessage');
+    const modal = document.getElementById('comingSoonModal');
+    
+    if (modalTitle) modalTitle.textContent = title;
+    if (modalMessage) modalMessage.textContent = message;
+    if (modal) modal.classList.add('active');
+}
+
+function closeModal() {
+    const modal = document.getElementById('comingSoonModal');
+    if (modal) modal.classList.remove('active');
+}
+
+function closeEditProfileModal() {
+    const modal = document.getElementById('editProfileModal');
+    if (modal) modal.classList.remove('active');
+}
+
+function closeChangePasswordModal() {
+    const modal = document.getElementById('changePasswordModal');
+    if (modal) modal.classList.remove('active');
+}
+
+function closeDownloadProfileModal() {
+    const modal = document.getElementById('downloadProfileModal');
+    if (modal) modal.classList.remove('active');
+}
+
+function prefillEditForm() {
+    const editName = document.getElementById('editName');
+    const editEmail = document.getElementById('editEmail');
+    const editStudentId = document.getElementById('editStudentId');
+    const editProgram = document.getElementById('editProgram');
+    const editYear = document.getElementById('editYear');
+    
+    if (editName) editName.value = currentUserData.name || '';
+    if (editEmail) editEmail.value = currentUserData.email || '';
+    if (editStudentId) editStudentId.value = currentUserData.studentId || '';
+    if (editProgram) editProgram.value = currentUserData.program || 'Computer Science';
+    if (editYear) editYear.value = currentUserData.year || '2nd Year';
+}
+
+function setupModalButtons() {
+    // Edit Profile Form Submit
+    const editProfileForm = document.getElementById('editProfileForm');
+    if (editProfileForm) {
+        editProfileForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            // Update user data
+            currentUserData.name = document.getElementById('editName').value;
+            currentUserData.email = document.getElementById('editEmail').value;
+            currentUserData.studentId = document.getElementById('editStudentId').value;
+            currentUserData.program = document.getElementById('editProgram').value;
+            currentUserData.year = document.getElementById('editYear').value;
+            
+            // Save to localStorage
+            localStorage.setItem('currentUser', JSON.stringify(currentUserData));
+            
+            // Show success message
+            showNotification('Profile updated successfully!', 'success');
+            
+            // Close modal
+            closeEditProfileModal();
+            
+            // Reload profile tab
+            loadProfileTab();
+            
+            // Update header name
+            if (document.getElementById('studentName')) {
+                document.getElementById('studentName').textContent = currentUserData.name;
+            }
         });
-        
-    } catch (error) {
-        console.error("Error loading courses:", error);
+    }
+    
+    // Change Password Form Submit
+    const changePasswordForm = document.getElementById('changePasswordForm');
+    if (changePasswordForm) {
+        changePasswordForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const currentPassword = document.getElementById('currentPassword').value;
+            const newPassword = document.getElementById('newPassword').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+            
+            if (newPassword !== confirmPassword) {
+                alert('New passwords do not match!');
+                return;
+            }
+            
+            if (newPassword.length < 8) {
+                alert('Password must be at least 8 characters long!');
+                return;
+            }
+            
+            // In a real app, you would validate current password with server
+            // For demo, just show success
+            showNotification('Password changed successfully! Please login again.', 'success');
+            
+            // Clear form
+            changePasswordForm.reset();
+            
+            // Close modal
+            closeChangePasswordModal();
+            
+            // Auto logout after 2 seconds
+            setTimeout(() => {
+                logout();
+            }, 2000);
+        });
+    }
+    
+    // Download Profile
+    const downloadButtons = document.querySelectorAll('[onclick*="downloadProfileData"]');
+    downloadButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            downloadProfileData();
+        });
+    });
+    
+    // Format selection
+    const formatOptions = document.querySelectorAll('.format-option');
+    formatOptions.forEach(option => {
+        option.addEventListener('click', function() {
+            formatOptions.forEach(opt => opt.classList.remove('selected'));
+            this.classList.add('selected');
+            selectedFormat = this.id.replace('Option', '');
+        });
+    });
+}
+
+function downloadProfileData() {
+    const includePersonal = document.getElementById('includePersonal')?.checked || true;
+    const includeCourses = document.getElementById('includeCourses')?.checked || true;
+    const includeGrades = document.getElementById('includeGrades')?.checked || true;
+    const includeAttendance = document.getElementById('includeAttendance')?.checked || true;
+    
+    // Create profile data object
+    const profileData = {
+        personal: includePersonal ? currentUserData : null,
+        courses: includeCourses ? [
+            { code: 'CS101', name: 'Introduction to Programming', progress: '65%' },
+            { code: 'MATH201', name: 'Calculus II', progress: '42%' }
+        ] : null,
+        grades: includeGrades ? [
+            { course: 'CS101', grade: 'A', score: 92 },
+            { course: 'MATH201', grade: 'B+', score: 88 }
+        ] : null,
+        attendance: includeAttendance ? { rate: '96.7%', courses: [] } : null,
+        exportedAt: new Date().toISOString()
+    };
+    
+    // Show success message
+    showNotification(`Profile downloaded in ${selectedFormat.toUpperCase()} format!`, 'success');
+    
+    // Close modal
+    closeDownloadProfileModal();
+    
+    // In a real app, you would generate and download the file
+    console.log('Profile data for download:', profileData);
+}
+
+function showNotification(message, type = 'success') {
+    const notification = document.createElement('div');
+    notification.className = 'notification';
+    
+    const typeStyles = {
+        'success': { color: '#4caf50', icon: 'fa-check-circle' },
+        'error': { color: '#f44336', icon: 'fa-exclamation-circle' },
+        'warning': { color: '#ff9800', icon: 'fa-exclamation-triangle' },
+        'info': { color: '#2196F3', icon: 'fa-info-circle' }
+    };
+    
+    const style = typeStyles[type] || typeStyles.success;
+    
+    notification.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: white;
+        color: #333;
+        padding: 15px 20px;
+        border-radius: 12px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+        z-index: 10001;
+        opacity: 0;
+        transform: translateX(100%);
+        transition: all 0.3s ease;
+        max-width: 300px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        border-left: 4px solid ${style.color};
+    `;
+    
+    notification.innerHTML = `
+        <i class="fas ${style.icon}" style="color: ${style.color}; font-size: 20px;"></i>
+        <span>${message}</span>
+    `;
+    
+    document.body.appendChild(notification);
+    
+    // Show notification
+    setTimeout(() => {
+        notification.style.opacity = '1';
+        notification.style.transform = 'translateX(0)';
+    }, 10);
+    
+    // Remove notification after 3 seconds
+    setTimeout(() => {
+        notification.style.opacity = '0';
+        notification.style.transform = 'translateX(100%)';
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.parentNode.removeChild(notification);
+            }
+        }, 300);
+    }, 3000);
+}
+
+function logout() {
+    if (confirm('Are you sure you want to logout?')) {
+        localStorage.clear();
+        window.location.href = 'login.html';
     }
 }
 
-async function loadGrades(uid) {
-    try {
-        const container = document.getElementById('gradesContent');
-        if (!container) return;
-        
-        // Clear spinner
-        container.innerHTML = '';
-        
-        const gradesHTML = `
-            <div class="mb-4">
-                <h5 class="mb-3">Grade Summary</h5>
-                <div class="progress mb-2">
-                    <div class="progress-bar" style="width: 85%">CS101: 85%</div>
-                </div>
-                <div class="progress mb-2">
-                    <div class="progress-bar" style="width: 78%">MATH201: 78%</div>
-                </div>
-                <div class="progress mb-2">
-                    <div class="progress-bar" style="width: 90%">ENG102: 90%</div>
-                </div>
-                <div class="progress mb-2">
-                    <div class="progress-bar" style="width: 82%">PHYS150: 82%</div>
-                </div>
-            </div>
-            <div class="alert alert-info">
-                <i class="fas fa-info-circle me-2"></i>
-                Your current GPA is 3.8. Midterm grades will be available next week.
-            </div>
-        `;
-        
-        container.innerHTML = gradesHTML;
-        
-    } catch (error) {
-        console.error("Error loading grades:", error);
-    }
-}
-
-async function loadAttendance(uid) {
-    try {
-        const container = document.getElementById('attendanceContent');
-        if (!container) return;
-        
-        // Clear spinner
-        container.innerHTML = '';
-        
-        const attendanceHTML = `
-            <div class="mb-4">
-                <h5 class="mb-3">Attendance Overview</h5>
-                <div class="alert alert-success">
-                    <i class="fas fa-check-circle me-2"></i>
-                    Overall Attendance: 95%
-                </div>
-            </div>
-            <div class="table-responsive">
-                <table class="table table-striped">
-                    <thead>
-                        <tr>
-                            <th>Course</th>
-                            <th>Present</th>
-                            <th>Absent</th>
-                            <th>Rate</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td>CS101</td>
-                            <td>28/30</td>
-                            <td>2</td>
-                            <td><span class="badge bg-success">93%</span></td>
-                        </tr>
-                        <tr>
-                            <td>MATH201</td>
-                            <td>29/30</td>
-                            <td>1</td>
-                            <td><span class="badge bg-success">97%</span></td>
-                        </tr>
-                        <tr>
-                            <td>ENG102</td>
-                            <td>30/30</td>
-                            <td>0</td>
-                            <td><span class="badge bg-success">100%</span></td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        `;
-        
-        container.innerHTML = attendanceHTML;
-        
-    } catch (error) {
-        console.error("Error loading attendance:", error);
-    }
-}
-
-// Global logout function
-window.logout = async function() {
-    try {
-        const { signOut } = await import('https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js');
-        const { auth } = await import('./firebase.js');
-        
-        console.log("Logging out...");
-        await signOut(auth);
-        window.location.href = "login.html";
-    } catch (error) {
-        console.error("Logout error:", error);
-        alert("Error logging out. Please try again.");
-    }
+// Make functions available globally
+window.showModal = showModal;
+window.closeModal = closeModal;
+window.openEditProfileModal = openEditProfileModal;
+window.openChangePasswordModal = openChangePasswordModal;
+window.openDownloadProfileModal = openDownloadProfileModal;
+window.viewCourseDetails = viewCourseDetails;
+window.downloadProfileData = downloadProfileData;
+window.selectFormat = function(format) {
+    selectedFormat = format;
+    const formatOptions = document.querySelectorAll('.format-option');
+    formatOptions.forEach(option => {
+        option.classList.remove('selected');
+        if (option.id === format + 'Option') {
+            option.classList.add('selected');
+        }
+    });
 };
-
-// Add error handling for module loading
-window.addEventListener('error', function(e) {
-    console.error('Script error:', e.message, 'at', e.filename, ':', e.lineno);
-});
+window.logout = logout;

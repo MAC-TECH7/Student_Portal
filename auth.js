@@ -1,56 +1,52 @@
-// auth.js - Keep as is (using v9.23.0)
-// ============================================
-
-import { auth, db } from "./firebase.js";
-import {
-    createUserWithEmailAndPassword,
-    signInWithEmailAndPassword,
-    onAuthStateChanged,
-    signOut
-} from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
-
-import { doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
-
-export async function signupUser(name, email, password, role = "student") {
-    try {
-        const userCred = await createUserWithEmailAndPassword(auth, email, password);
-        const uid = userCred.user.uid;
-
-        await setDoc(doc(db, "users", uid), {
-            name,
-            email,
-            role,
-            createdAt: new Date()
-        });
-
-        return { success: true, uid };
-
-    } catch (error) {
-        return { success: false, message: error.message };
-    }
-}
-
+// auth.js - Simple authentication
 export async function loginUser(email, password) {
-    try {
-        const userCred = await signInWithEmailAndPassword(auth, email, password);
-        const uid = userCred.user.uid;
-
-        const snap = await getDoc(doc(db, "users", uid));
-        const user = snap.data();
-
-        return { success: true, role: user.role };
-
-    } catch (error) {
-        return { success: false, message: error.message };
+    console.log("Login attempt:", email);
+    
+    // Hardcoded users
+    const users = {
+        'student@school.com': { 
+            password: 'password123', 
+            role: 'student', 
+            name: 'Demo Student',
+            studentId: 'STU2024001',
+            program: 'Computer Science',
+            year: '2nd Year'
+        },
+        'admin@school.com': { 
+            password: 'admin123', 
+            role: 'admin', 
+            name: 'Administrator'
+        }
+    };
+    
+    const user = users[email];
+    if (user && user.password === password) {
+        // Save user to localStorage
+        localStorage.setItem('currentUser', JSON.stringify({
+            email: email,
+            name: user.name,
+            role: user.role,
+            ...(user.studentId && { studentId: user.studentId }),
+            ...(user.program && { program: user.program }),
+            ...(user.year && { year: user.year }),
+            loggedIn: true
+        }));
+        
+        console.log("Login successful:", user.role);
+        return { success: true, role: user.role, userData: user };
     }
+    
+    return { success: false, message: 'Invalid email or password' };
 }
 
-export async function logoutUser() {
-    await signOut(auth);
+export function getCurrentUser() {
+    const userStr = localStorage.getItem('currentUser');
+    return userStr ? JSON.parse(userStr) : null;
 }
 
-export function onUserStateChanged(callback) {
-    onAuthStateChanged(auth, (user) => {
-        callback(user);
-    });
+export function logoutUser() {
+    localStorage.removeItem('currentUser');
+    localStorage.removeItem('isLoggedIn');
+    localStorage.removeItem('userRole');
+    return Promise.resolve();
 }
